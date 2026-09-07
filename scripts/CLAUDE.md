@@ -35,8 +35,10 @@ add inference, weighting, or "counts as half a set" logic.
 
 1. A machine counts as logged for a group when at least one **working** set
    against that pairing records whatever that machine measures: **both reps and
-   weight**, or a duration, or a distance. Weight may be `0` — a bodyweight
-   machine is still a weighted machine (D14). Reps may not be 0.
+   weight**, or a duration, or a distance. Reps may not be 0. Weight of `0` is
+   still accepted — logging is never blocked — but on a bodyweight machine it
+   is an incomplete entry: he enters his bodyweight as the load (D14), so warn
+   on a 0 rather than treating it as correct.
    **Warm-up sets never count** (D15): not for completion, not for personal
    bests, not for volume.
 2. A muscle group succeeds when the number of **distinct machines** logged

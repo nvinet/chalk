@@ -140,29 +140,37 @@ migration (#54, #11).
 **Still open:** which families fall on which days, and how often. The shape is
 decided; the values are not. Q9 stays open for those.
 
-### D14 — Every lift records a weight, and 0 is a real weight
-Agreed 7 Sep 2026 (issue #8, answering Q7). The hack squat written as 0 kg is
-bodyweight-loaded, not an uncounted sled. A weight is always recorded, even when
-it is bodyweight, so the machine behaves like every other machine.
+### D14 — Bodyweight work is entered as a weight, by hand
+Agreed 7 Sep 2026 (issue #8, answering Q7). A bodyweight-loaded machine such as
+the hack squat sled is recorded with a real number: **he works out his bodyweight
+and enters it as the weight.** It is not left at 0, and it is not a separate kind
+of machine.
 
 **No reps-only tracking type is needed.** `TrackingType` stays at the three
-values D12 settled. This confirms the existing rule rather than changing it:
-`isSetLogged` already requires positive reps and a weight that may be zero, so
-no code changes.
+values D12 settled, and every lift behaves the same way.
 
-Read as "the weight field is always present and may be 0", not as "store his
-body weight as the load" — the latter would need body weight tracking, which
-Q11 keeps out of v1.
+**The app never asks for his bodyweight and never stores it.** He supplies the
+number when he logs. That keeps body-weight tracking out of v1 (Q11) while still
+giving bodyweight machines a comparable load to chart.
+
+**0 kg stays accepted, but now means something different.** The rule is
+unchanged — `isSetLogged` still takes a weight of 0 as valid, because logging is
+never blocked (N-rule). But a 0 on a bodyweight machine is now an *incomplete*
+entry rather than a correct one, so it is a good candidate for the implausible
+value warning in #26. It must warn, never reject.
+
+**No code change to the completion rule**, and the historical fixtures keep the
+outcomes they were computed with.
 
 ### D15 — Warm-up sets are recorded, and count for nothing
 Agreed 7 Sep 2026 (issue #52, answering Q21). `SetEntry` gains a warm-up flag.
 A warm-up set is kept, and is excluded from personal bests and from session
 completion — a warm-up alone must never count a machine as logged for a group.
 
-**Consequence:** the exclusion belongs in `isSetLogged`, which is what both the
-completion rule and all of `scoring.ts` go through. That means warm-ups drop out
-of volume as well. That was not explicitly asked for, but it follows from the
-same predicate and is the consistent reading: a warm-up is not working volume.
+**Volume too — confirmed 7 Sep 2026.** The exclusion belongs in `isSetLogged`,
+which is what both the completion rule and all of `scoring.ts` go through, so
+warm-ups drop out of volume as well as bests and completion. One predicate, one
+meaning of "a set that counted": a warm-up is not working volume.
 
 ### D16 — Targets are dropped from v1
 Agreed 7 Sep 2026 (issue #1). Q3 asked what a target actually is; the answer is
