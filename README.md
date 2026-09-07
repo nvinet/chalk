@@ -1,56 +1,141 @@
-# Welcome to your Expo app 👋
+# Chalk
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+An iOS app that replaces a gym training spreadsheet. Offline, portrait-only,
+single user. No accounts, no analytics, no ads, no network calls — the data
+lives on the device and nothing leaves it without an explicit action.
 
-## Get started
+## Why it exists
 
-1. Install dependencies
+The spreadsheet it replaces had two levels: a training day, and the machines
+used on it. That is the limitation that prompted the app. Existing trackers
+were not a fit either — they assume a session goes to plan, so every deviation
+becomes a negotiation with the interface. If the bench is taken, Chalk lets
+another chest machine satisfy chest, and nothing is recorded as "missed".
 
-   ```bash
-   npm install
-   ```
+## The model
 
-2. Start the app
+Three levels: **family → muscle group → machine.**
 
-   ```bash
-   npx expo start
-   ```
+- A **family** is a training day: push, pull, legs, abs, cardio.
+- A **muscle group** sits inside a family and is what a session is scored on.
+- A **machine** sits under one or more muscle groups, possibly across families.
+  The Smith machine is chest and shoulders on push, and quads on legs — one
+  machine, not three.
 
-In the output, you'll find options to open the app in a
+Abs and cardio have no muscle groups; internally they carry a single implicit
+group so one completion rule covers every family.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### A set names its muscle group
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+A set records both the machine and the muscle group it was performed for.
+Logging the Smith machine for chest does nothing for shoulders, and the same
+machine may legitimately appear twice in a session as two entries for two
+groups.
 
-## Get a fresh project
+Because the set is explicit about this, Chalk needs no primary/secondary muscle
+weighting. Other trackers carry one because they *infer* which muscles a set
+worked and must discount secondaries. Chalk is told, so its numbers are exact.
 
-When you're ready, run:
+### Completion
+
+1. A machine counts as logged for a group when a set against that pairing
+   records **reps and weight**, or a duration for a timed machine. A weight of
+   0 is valid (bodyweight sled); 0 reps is not.
+2. A muscle group succeeds when the number of **distinct machines** logged
+   against it reaches its required count. Many sets on one machine count once.
+   A required count of 0 means optional — trainable, never blocking.
+3. A session succeeds when every group in its requirements has succeeded.
+
+Required counts are set per muscle group **per family**, and are snapshotted
+onto a session when it starts, so changing a family's configuration never
+retrospectively fails a past session.
+
+### The pairing
+
+History, "last time", targets, charts and personal bests are all keyed on
+`(machine, muscle group)` — never on the machine alone. Smith machine for chest
+and Smith machine for shoulders are different histories with different weights.
+
+## Stack
+
+Expo + React Native, with SQLite via Drizzle for persistence. Chosen over
+SwiftUI because the app has no server, no login and no sync, and momentum
+matters more than the native polish gap. This is a permanent choice rather than
+a step toward a native rewrite; portability comes from keeping `src/domain/`
+pure and from SQLite being directly readable by any future native app.
+
+Expo 57 / React Native 0.86 / React 19. See
+[the versioned Expo docs](https://docs.expo.dev/versions/v57.0.0/) — the API has
+changed substantially in recent versions.
+
+## Status
+
+Early. The repository currently holds the Expo starter scaffold under `src/`
+plus the planning material in `docs/`. The domain layer, database schema and
+session-logging screens described above are designed but not yet built.
+
+Several decisions are still open and are listed in `docs/decisions.md` — most
+significantly what a "target" is (Q3), the required machine count per group
+(Q27), and which machines belong under abs and cardio (Q28, both families
+currently empty). These block the corresponding features; they are questions to
+ask, not to guess at.
+
+## Getting started
 
 ```bash
-npm run reset-project
+npm install
+npm start        # then press i for the iOS simulator
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Other scripts:
 
-### Other setup steps
+```bash
+npm run ios      # expo start --ios
+npm run android  # expo start --android
+npm run web      # expo start --web
+npm run lint     # expo lint
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Routing is file-based via `expo-router`, with screens under `src/app/`.
 
-## Learn more
+## Layout
 
-To learn more about developing your project with Expo, look at the following resources:
+```
+src/
+  app/          screens and routes (expo-router)
+  components/   presentation
+  hooks/
+  constants/
+docs/
+  decisions.md              what was agreed, and why
+  wireframes/               14 screens, plus a navigation map
+  Chalk - project plan v0.2.docx
+scripts/
+  bootstrap-issues.sh       creates the GitHub backlog via gh
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### Planned
 
-## Join the community
+`src/domain/` will hold the completion rules, progression maths and taxonomy as
+**pure TypeScript** — no React, no Drizzle, no Expo, not even type imports. It
+is the part worth keeping if the app is ever rebuilt natively, and the part
+testable without a simulator. If it decides something it belongs there; if it
+draws something it does not.
 
-Join our community of developers creating universal apps.
+`src/db/` will hold the Drizzle schema. Weight is stored canonically in
+kilograms and converted only for display. Every set is written to SQLite as it
+is entered, never batched at the end of a session — a crash mid-session must
+lose nothing.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Conventions
+
+- TypeScript `strict`, with `noUncheckedIndexedAccess`.
+- Portrait only, everywhere, including iPad — iPad is a wider view of the same
+  data, not a different layout.
+- Touch targets ≥ 44pt, primary actions in the lower third and reachable with
+  one thumb.
+- Never block logging. Warn on an implausible value; never reject it.
+
+## License
+
+MIT — see `LICENSE`.

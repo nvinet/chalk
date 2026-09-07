@@ -3,7 +3,7 @@
 The durable record of what was agreed and why. `CLAUDE.md` is the short version
 loaded into every session; this is the reasoning behind it.
 
-Source: `docs/project-plan-v0.2.pdf` (§3 taxonomy, §7 data model, §15 questions).
+Source: `docs/Chalk - project plan v0.2.docx` (§3 taxonomy, §7 data model, §15 questions).
 
 ---
 

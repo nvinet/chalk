@@ -3,7 +3,7 @@
 An iOS app that replaces a gym training spreadsheet. Expo + React Native,
 SQLite via Drizzle, **entirely offline**, **portrait only**, single user.
 
-Full plan: `docs/project-plan-v0.2.pdf`. Agreed decisions: `docs/decisions.md`.
+Full plan: `docs/Chalk - project plan v0.2.docx`. Agreed decisions: `docs/decisions.md`.
 Read `docs/decisions.md` before changing anything in `src/domain/`.
 
 ## The model — get this right, everything depends on it
