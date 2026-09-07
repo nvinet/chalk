@@ -28,18 +28,34 @@ import type {
   SetEntry,
   TrackingType,
 } from "./types.ts";
+export { isWeightBased } from "./types.ts";
 
-/** Rule 1. Does this single set count as real, recorded work? */
+/**
+ * Rule 1. Does this single set count as real, recorded work?
+ *
+ * This is the one predicate the completion rule and the whole of scoring.ts
+ * go through, so "a set that counted" means the same thing everywhere — which
+ * is why excluding warm-ups here also excludes them from volume and from
+ * personal bests (D15).
+ */
 export function isSetLogged(set: SetEntry, tracking: TrackingType): boolean {
   if (set.skipped || !set.completed) return false;
 
-  if (tracking === "duration") {
-    return isPositive(set.durationSeconds);
-  }
+  // A warm-up is kept, but counts for nothing at all (D15).
+  if (set.warmup) return false;
 
-  // Reps must be positive. Weight must be present but may legitimately be
-  // zero — a bodyweight-loaded machine such as the hack squat sled (Q7).
-  return isPositive(set.reps) && isNonNegative(set.weightKg);
+  switch (tracking) {
+    case "duration":
+      return isPositive(set.durationSeconds);
+    case "distance":
+      return isPositive(set.distanceM);
+    case "weightReps":
+      // Reps must be positive. Weight must be present but may be zero: logging
+      // is never blocked. On a bodyweight machine a 0 is an incomplete entry
+      // rather than a correct one — he enters his bodyweight as the load
+      // (D14) — so it warns elsewhere, it does not fail here.
+      return isPositive(set.reps) && isNonNegative(set.weightKg);
+  }
 }
 
 function isPositive(v: number | null | undefined): boolean {

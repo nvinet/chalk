@@ -21,8 +21,28 @@ export type IsoDate = string;
 /** ISO 8601 timestamp. */
 export type IsoTimestamp = string;
 
-/** What a machine records. Cardio machines record time; everything else lifts. */
-export type TrackingType = "weightReps" | "duration";
+/**
+ * What a machine records. One measure per machine (D12) — the measure never
+ * varies set to set, which is what keeps each machine's history comparable.
+ *
+ *  - `weightReps`  reps and a weight. Bodyweight machines record a real weight
+ *                  too: he works out his bodyweight and enters it (D14).
+ *  - `duration`    seconds. HIIT, rowing.
+ *  - `distance`    metres, displayed as km. Jogging, swimming.
+ */
+export type TrackingType = "weightReps" | "duration" | "distance";
+
+/**
+ * True when the measure is reps-and-weight, so volume, estimated 1RM and
+ * personal bests mean something.
+ *
+ * Exists because the engine used to ask `tracking === "duration"` and treat
+ * everything else as weights. Adding `distance` silently made that wrong —
+ * a run would have recorded a heaviest of 0 kg. Ask this instead (D12).
+ */
+export function isWeightBased(tracking: TrackingType): boolean {
+  return tracking === "weightReps";
+}
 
 export type SessionStatus = "inProgress" | "finished" | "abandoned";
 
@@ -104,6 +124,10 @@ export interface SetEntry {
   reps?: number | null;
   weightKg?: number | null;
   durationSeconds?: number | null;
+  /** Canonical metres, displayed as km (D12). */
+  distanceM?: number | null;
+  /** Kept, but counts for nothing: not completion, not bests, not volume (D15). */
+  warmup?: boolean;
   completed: boolean;
   skipped: boolean;
   skipReason?: SkipReason | null;

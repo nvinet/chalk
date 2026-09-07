@@ -35,7 +35,6 @@ export const families = sqliteTable("families", {
   usesMuscleGroups: integer("uses_muscle_groups", { mode: "boolean" })
     .notNull()
     .default(true),
-  timesPerWeek: integer("times_per_week").notNull().default(0),
   archived: integer("archived", { mode: "boolean" }).notNull().default(false),
 });
 
@@ -74,7 +73,7 @@ export const machines = sqliteTable("machines", {
   name: text("name").notNull(),
   /** JSON array of old spreadsheet spellings, so search still finds them. */
   aliases: text("aliases", { mode: "json" }).$type<string[]>().notNull().default([]),
-  /** "weightReps" | "duration" */
+  /** "weightReps" | "duration" | "distance" — one measure per machine (D12). */
   tracking: text("tracking").notNull().default("weightReps"),
   weightIncrementKg: real("weight_increment_kg").notNull().default(2.5),
   defaultRestSeconds: integer("default_rest_seconds").notNull().default(90),
@@ -169,6 +168,14 @@ export const setEntries = sqliteTable(
     /** Canonical kilograms. May legitimately be 0 for a bodyweight sled. */
     weightKg: real("weight_kg"),
     durationSeconds: integer("duration_seconds"),
+    /** Canonical metres, displayed as km. Jogging and swimming (D12). */
+    distanceM: real("distance_m"),
+    /**
+     * Kept, but counts for nothing: not completion, not personal bests, not
+     * volume (D15). The exclusion lives in isSetLogged, so one predicate
+     * decides it everywhere.
+     */
+    warmup: integer("warmup", { mode: "boolean" }).notNull().default(false),
     completed: integer("completed", { mode: "boolean" }).notNull().default(true),
     skipped: integer("skipped", { mode: "boolean" }).notNull().default(false),
     skipReason: text("skip_reason"),
@@ -188,29 +195,23 @@ export const setEntries = sqliteTable(
   ],
 );
 
-/* ----------------------------------------------------------------- targets */
+/* ---------------------------------------------------------------- schedule */
 
-export const targets = sqliteTable(
-  "targets",
-  {
-    id: text("id").primaryKey(),
-    machineId: text("machine_id")
-      .notNull()
-      .references(() => machines.id, { onDelete: "cascade" }),
-    /** A target belongs to a machine used for a group, not a machine alone. */
-    muscleGroupId: text("muscle_group_id")
-      .notNull()
-      .references(() => muscleGroups.id, { onDelete: "cascade" }),
-    targetWeightKg: real("target_weight_kg"),
-    targetReps: integer("target_reps"),
-    targetSets: integer("target_sets"),
-    dueDate: text("due_date"),
-    createdAt: text("created_at").notNull().default(now),
-    /** Kept after it is hit rather than deleted (D5). */
-    achievedDate: text("achieved_date"),
-  },
-  (t) => [index("targets_pairing_idx").on(t.machineId, t.muscleGroupId)],
-);
+/**
+ * The weekly plan: which family falls on which day (D13).
+ *
+ * A row per weekday rather than a count per family, because the routine
+ * alternates families across the week and a count cannot express an order.
+ * A null family is a rest day. Editable whenever the schedule is created or
+ * changed — the values themselves are still open (Q9, #9).
+ */
+export const weeklySchedule = sqliteTable("weekly_schedule", {
+  /** 0 = Monday … 6 = Sunday. */
+  dayOfWeek: integer("day_of_week").primaryKey(),
+  familyId: text("family_id").references(() => families.id, {
+    onDelete: "set null",
+  }),
+});
 
 /* -------------------------------------------------------------- app config */
 
@@ -224,4 +225,4 @@ export type MuscleGroupRow = typeof muscleGroups.$inferSelect;
 export type MachineRow = typeof machines.$inferSelect;
 export type SessionRow = typeof sessions.$inferSelect;
 export type SetEntryRow = typeof setEntries.$inferSelect;
-export type TargetRow = typeof targets.$inferSelect;
+export type WeeklyScheduleRow = typeof weeklySchedule.$inferSelect;

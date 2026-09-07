@@ -8,6 +8,7 @@
  */
 
 import { indexById, isSetLogged } from "./completion.ts";
+import { isWeightBased } from "./types.ts";
 import type { Catalogue, Id, Machine, Session, SetEntry } from "./types.ts";
 
 /** A machine used for a specific muscle group. The unit of history. */
@@ -24,7 +25,7 @@ const matches = (set: SetEntry, p: Pairing) =>
 /** Volume for one set. Zero for timed work and for anything not recorded. */
 export function setVolumeKg(set: SetEntry, machine: Machine): number {
   if (!isSetLogged(set, machine.tracking)) return 0;
-  if (machine.tracking === "duration") return 0;
+  if (!isWeightBased(machine.tracking)) return 0;
   return (set.reps ?? 0) * (set.weightKg ?? 0);
 }
 
@@ -88,7 +89,7 @@ export function bestsForPairing(
   for (const session of sessions) {
     for (const set of session.sets) {
       if (!matches(set, pairing) || !isSetLogged(set, machine.tracking)) continue;
-      if (machine.tracking === "duration") continue;
+      if (!isWeightBased(machine.tracking)) continue;
 
       const weight = set.weightKg ?? 0;
       const reps = set.reps ?? 0;
@@ -131,7 +132,9 @@ export function personalBestsInSession(
 
   for (const set of session.sets) {
     const machine = machinesById.get(set.machineId);
-    if (!machine || machine.tracking === "duration") continue;
+    // Cardio has no personal bests yet — "furthest" and "longest" are Q3's
+    // question and belong to M4 (D12).
+    if (!machine || !isWeightBased(machine.tracking)) continue;
     if (!isSetLogged(set, machine.tracking)) continue;
 
     const pairing = { machineId: set.machineId, muscleGroupId: set.muscleGroupId };
@@ -197,6 +200,16 @@ export function lastTimeForPairing(
     };
   }
 
+  if (machine.tracking === "distance") {
+    const metres = sets.reduce((t, s) => t + (s.distanceM ?? 0), 0);
+    return {
+      date: session.date,
+      sets,
+      topSetWeightKg: null,
+      summary: formatKm(metres),
+    };
+  }
+
   const topSetWeightKg = Math.max(...sets.map((s) => s.weightKg ?? 0));
   const reps = sets[0]?.reps ?? 0;
   const uniformReps = sets.every((s) => (s.reps ?? 0) === reps);
@@ -205,6 +218,12 @@ export function lastTimeForPairing(
     : `${sets.length} sets @ ${formatKg(topSetWeightKg)}`;
 
   return { date: session.date, sets, topSetWeightKg, summary };
+}
+
+/** Metres in, kilometres out — distance is stored canonically in metres (D12). */
+export function formatKm(metres: number): string {
+  const km = Math.round((metres / 1000) * 100) / 100;
+  return `${km} km`;
 }
 
 export function formatKg(kg: number): string {
@@ -218,6 +237,10 @@ export function topSetSeries(
   pairing: Pairing,
   machine: Machine,
 ): Array<{ date: string; weightKg: number }> {
+  // A non-weight machine has no top set; charting one would draw a flat line
+  // of zeroes (D12).
+  if (!isWeightBased(machine.tracking)) return [];
+
   return sessions
     .map((session) => {
       const weights = session.sets
