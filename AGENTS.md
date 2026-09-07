@@ -15,6 +15,24 @@ Code on local `main`; no feature branches. Work is ready for review when it is
 **committed on local `main`**. Do not push — `origin/main` is updated only after
 the user has reviewed.
 
+Reference the issue in the commit as `Refs #n`, never `Closes #n` — closing is
+the user's call, and an auto-close on push would take it away from him.
+
+## Hand over on the issue, not just in chat
+
+Before moving the card to In review, **post a comment on the issue** with the
+context a reviewer needs. Chat scrollback is not the record; the issue is. Cover:
+
+- **How it was verified** — what actually ran, on what, and the observed result.
+  Distinguish "compiles" from "runs". If something could not be verified, say so.
+- **What landed**, file by file, and *why* each piece is the way it is.
+- **What to weigh** — judgement calls, anything deliberately left undone and the
+  issue that picks it up, and code that is temporary scaffolding with the
+  condition for deleting it.
+- **Scope added beyond the issue**, called out for a decision rather than
+  buried. Anything a tool changed as a side effect counts.
+- **Pre-existing problems** noticed but not caused, marked as such.
+
 # Answering an open question
 
 `docs/decisions.md` is the durable record. Its "Open — ask, do not guess" table
