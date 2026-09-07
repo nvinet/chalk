@@ -1,4 +1,5 @@
 export { db, expoDb, DATABASE_NAME } from './client';
+export { useMigrationState, type MigrationState } from './migrate';
 
 // Re-exported so screens have one import for data access and do not each reach
 // into drizzle-orm internals.

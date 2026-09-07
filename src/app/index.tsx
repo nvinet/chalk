@@ -9,6 +9,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { WebBadge } from '@/components/web-badge';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { useMigrationState } from '@/db';
 import { checkDatabaseHealth, type DatabaseHealth } from '@/db/health';
 
 function getDevMenuHint() {
@@ -43,8 +44,18 @@ function useDatabaseHint() {
   return <ThemedText type="small">SQLite {health.sqliteVersion}</ThemedText>;
 }
 
+function useMigrationHint() {
+  const state = useMigrationState();
+  if (state.status === 'running') return <ThemedText type="small">migrating…</ThemedText>;
+  if (state.status === 'failed') {
+    return <ThemedText type="small">failed — {state.error}</ThemedText>;
+  }
+  return <ThemedText type="small">up to date</ThemedText>;
+}
+
 export default function HomeScreen() {
   const databaseHint = useDatabaseHint();
+  const migrationHint = useMigrationHint();
 
   return (
     <ThemedView style={styles.container}>
@@ -67,6 +78,7 @@ export default function HomeScreen() {
           />
           <HintRow title="Dev tools" hint={getDevMenuHint()} />
           <HintRow title="Database" hint={databaseHint} />
+          <HintRow title="Migrations" hint={migrationHint} />
           <HintRow
             title="Fresh start"
             hint={<ThemedText type="code">npm run reset-project</ThemedText>}
