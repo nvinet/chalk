@@ -1,4 +1,5 @@
 import * as Device from 'expo-device';
+import { useState } from 'react';
 import { Platform, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -8,6 +9,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { WebBadge } from '@/components/web-badge';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { checkDatabaseHealth, type DatabaseHealth } from '@/db/health';
 
 function getDevMenuHint() {
   if (Platform.OS === 'web') {
@@ -28,7 +30,22 @@ function getDevMenuHint() {
   );
 }
 
+// Temporary: acceptance for #10, that the database opens on device and a query
+// returns. Delete once real data is on screen.
+function useDatabaseHint() {
+  // Lazy initialiser, not an effect: the check is synchronous and wants to run
+  // exactly once. Doing it in an effect would setState during the first commit.
+  const [health] = useState<DatabaseHealth>(checkDatabaseHealth);
+
+  if (!health.ok) {
+    return <ThemedText type="small">failed — {health.error}</ThemedText>;
+  }
+  return <ThemedText type="small">SQLite {health.sqliteVersion}</ThemedText>;
+}
+
 export default function HomeScreen() {
+  const databaseHint = useDatabaseHint();
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
@@ -49,6 +66,7 @@ export default function HomeScreen() {
             hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
           />
           <HintRow title="Dev tools" hint={getDevMenuHint()} />
+          <HintRow title="Database" hint={databaseHint} />
           <HintRow
             title="Fresh start"
             hint={<ThemedText type="code">npm run reset-project</ThemedText>}
