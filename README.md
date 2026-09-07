@@ -101,32 +101,54 @@ Routing is file-based via `expo-router`, with screens under `src/app/`.
 
 ## Layout
 
+The model splits in two, and the split runs through every layer. **Catalogue**
+is what exists to be trained: reference data, seeded once, edited rarely.
+**Sessions** are what actually happened: written constantly, and irreplaceable
+— the catalogue can be re-seeded, a session cannot.
+
 ```
 src/
+  domain/       pure TypeScript: the rules. No React, Drizzle or Expo
+    types.ts      barrel over types/catalogue.ts and types/sessions.ts
+    completion.ts the completion rule
+    scoring.ts    volume, estimated 1RM, personal bests, "last time"
+  db/
+    schema.ts     barrel over schema/{catalogue,sessions,config}.ts
+    repository.ts catalogue queries, returning domain types
+    mappers.ts    Drizzle rows in, domain types out
+    client.ts     openDatabaseSync + the Drizzle handle
+    migrate.ts    applies migrations on launch
   app/          screens and routes (expo-router)
   components/   presentation
-  hooks/
-  constants/
+  __tests__/
+drizzle/        generated migrations — never edit by hand
 docs/
   decisions.md              what was agreed, and why
   wireframes/               14 screens, plus a navigation map
-  Chalk - project plan v0.2.docx
-scripts/
-  bootstrap-issues.sh       creates the GitHub backlog via gh
 ```
 
-### Planned
+Import from `types.ts` and `schema.ts`, not from the parts beneath them. The
+barrels are the public surface, which keeps the seam free to move.
 
-`src/domain/` will hold the completion rules, progression maths and taxonomy as
+### Why the layers are separate
+
+`src/domain/` holds the completion rules, progression maths and taxonomy as
 **pure TypeScript** — no React, no Drizzle, no Expo, not even type imports. It
 is the part worth keeping if the app is ever rebuilt natively, and the part
 testable without a simulator. If it decides something it belongs there; if it
-draws something it does not.
+draws something it does not. `mappers.ts` is the seam that enforces it.
 
-`src/db/` will hold the Drizzle schema. Weight is stored canonically in
-kilograms and converted only for display. Every set is written to SQLite as it
-is entered, never batched at the end of a session — a crash mid-session must
-lose nothing.
+`src/db/` holds the Drizzle schema. Weight is stored canonically in kilograms
+and distance in metres, converted only for display. Every set is written to
+SQLite as it is entered, never batched at the end of a session — a crash
+mid-session must lose nothing.
+
+**One database, deliberately.** Four foreign keys run from sessions into the
+catalogue, and SQLite does not enforce foreign keys across attached databases.
+Every history, chart and personal best is keyed on the (machine, muscle group)
+pairing, so a set pointing at a machine that no longer exists would break
+"last time" silently. That is why machines and muscle groups archive rather
+than delete.
 
 ## Conventions
 
