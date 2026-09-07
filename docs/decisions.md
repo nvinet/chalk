@@ -74,6 +74,19 @@ Agreed 7 Sep 2026, replacing the working title "Gym Progression", which sat too
 close to Alpha Progression and was unsearchable. Nothing on the App Store uses
 Chalk. If it ever ships publicly, run a proper UK IPO trademark check first.
 
+### D11 — Distribution: Apple Developer Program + TestFlight
+Agreed 7 Sep 2026 (issue #6, answering Q16). Personal provisioning was rejected
+because a build expires after seven days, which would mean re-installing mid-week
+to keep training. TestFlight builds last 90 days.
+
+The developer already holds a paid Apple Developer Program membership, so the
+annual cost that Q16 raised is settled and is not a factor.
+
+**App Store publication is deferred, not rejected.** It stays possible once the
+app is in good shape, but it carries admin work that is deliberately not being
+started now. Nothing in the build should assume App Store review — no
+subscription plumbing, no marketing metadata.
+
 ---
 
 ## Open — ask, do not guess
@@ -87,7 +100,6 @@ Chalk. If it ever ships publicly, run a proper UK IPO trademark check first.
 | **Q28** | What machines belong under Abs and Cardio? Both families are currently empty. | Abs and cardio being usable at all |
 | **Q7** | Hack squat logged at 0 kg — bodyweight, or is the sled not counted? | Whether a reps-only tracking type is needed |
 | **Q6** | The legs sheet's unnamed seventh exercise (30 reps @ 27.5 kg, then 10 @ 25 kg). What is it? | One machine missing from the library |
-| **Q16** | Distribution: personal provisioning (expires weekly), Apple Developer Program + TestFlight, or App Store? | How we test; annual cost |
 | **Q9** | Weekly frequency target per family. | The weekly plan |
 | **Q29** | Should cardio record distance as well as time? | Whether a third tracking type is needed |
 | **Q30** | Is a full session too much ceremony for abs, which used to be one tick? | Whether a quick-log path is built |
