@@ -34,8 +34,8 @@ add inference, weighting, or "counts as half a set" logic.
 ### The completion rule
 
 1. A machine counts as logged for a group when at least one set against that
-   pairing records **both reps and weight** — or a duration, for a timed
-   machine. Weight may be `0` (bodyweight sled). Reps may not.
+   pairing records whatever that machine measures: **both reps and weight**, or
+   a duration, or a distance. Weight may be `0` (bodyweight sled). Reps may not.
 2. A muscle group succeeds when the number of **distinct machines** logged
    against it reaches its required count. Many sets on one machine count once.
    **A required count of 0 means optional** — shown, trainable, never blocking.
@@ -105,6 +105,9 @@ were computed independently from the raw file before the code existed.
 
 ## Do not
 
+- Do not write `tracking === "duration"`. There are three tracking types
+  (`weightReps | duration | distance`, D12) and that comparison silently treats
+  distance as a weights machine. Ask whether the measure is weight-based.
 - **Do not use Realm.** Deprecated Sept 2024; Device Sync shut down Sept 2025.
 - **Do not put training data in AsyncStorage.** No queries, indexes or schema.
 - Do not add primary/secondary muscle weighting (see above).

@@ -60,6 +60,10 @@ of the exercise library and taxonomy only.
 Tracking type lives on the machine (`weightReps` | `duration`), so cardio needs
 no special case in the completion rule.
 
+**Widened by D12:** a third type, `distance`, was added. The principle here —
+one tracking type per machine, no special case in the rule — is what survived,
+and is why D12 stayed cheap.
+
 ### D9 — Stack: Expo + React Native, SQLite via Drizzle
 Chosen over SwiftUI because the developer is productive in React and momentum
 matters more than the native polish gap for an app with no server, no login and
@@ -87,6 +91,55 @@ app is in good shape, but it carries admin work that is deliberately not being
 started now. Nothing in the build should assume App Store review — no
 subscription plumbing, no marketing metadata.
 
+### D12 — Cardio records duration *or* distance, one per machine
+Agreed 7 Sep 2026 (issue #51, answering Q29). `TrackingType` becomes
+`weightReps | duration | distance`. Jogging and swimming are distance; HIIT and
+rowing are duration.
+
+Distance is stored canonically in **metres** and displayed in kilometres, for the
+same reason weight is stored in kilograms (G1).
+
+**Laps were rejected.** A lap is meaningless without the pool length, so 80 laps
+at one pool is not comparable with 80 at another — it would corrupt a history the
+first time he swam somewhere else.
+
+**One measure per machine, not per set.** An earlier reading of the answer let
+swimming be logged as either time or distance interchangeably. Dropping that is
+what kept this change small: the measure stays a property of the machine, so
+nothing moves onto `SetEntry`, the call sites that branch on `machine.tracking`
+keep their shape, and each machine keeps exactly one comparable history for
+charts and "last time".
+
+**The trap this creates.** Every guard in the engine was written as
+`tracking === "duration"` — meaning "duration versus everything else, and
+everything else is weights". A third value silently makes "everything else"
+wrong: `bestsForPairing` would record a heaviest of 0, `personalBestsInSession`
+would emit a bogus 0 kg best after every run, `lastTimeForPairing` would read
+"1x0 @ 0 kg" instead of "5.0 km", and `topSetSeries` would chart a flat line of
+zeroes. Those guards must become a predicate (`isWeightBased`) **in the same
+change as the enum**, not after it.
+
+Cardio stays out of personal bests for now, as timed machines already are.
+Whether "furthest" and "longest" count as bests is really Q3's question, and
+belongs to M4.
+
+**Consequence for Q28 (#5):** naming a cardio machine now also means declaring
+its measure. That is no longer a separate decision.
+
+### D13 — The weekly plan is a configurable schedule, not a frequency count
+Agreed 7 Sep 2026 (issue #9, answering part of Q9). The routine alternates the
+muscle family across the week, and the schedule is editable when it is created
+or changed.
+
+**This makes `families.times_per_week` the wrong shape.** An integer per family
+expresses "push twice a week" but cannot express an order, so it cannot say
+push then pull then legs. The draft schema in `src/db/schema.ts` still carries
+that column and it should be replaced by a schedule table before the first
+migration (#54, #11).
+
+**Still open:** which families fall on which days, and how often. The shape is
+decided; the values are not. Q9 stays open for those.
+
 ---
 
 ## Open — ask, do not guess
@@ -100,8 +153,7 @@ subscription plumbing, no marketing metadata.
 | **Q28** | What machines belong under Abs and Cardio? Both families are currently empty. | Abs and cardio being usable at all |
 | **Q7** | Hack squat logged at 0 kg — bodyweight, or is the sled not counted? | Whether a reps-only tracking type is needed |
 | **Q6** | The legs sheet's unnamed seventh exercise (30 reps @ 27.5 kg, then 10 @ 25 kg). What is it? | One machine missing from the library |
-| **Q9** | Weekly frequency target per family. | The weekly plan |
-| **Q29** | Should cardio record distance as well as time? | Whether a third tracking type is needed |
+| **Q9** | Which families fall on which days, and how often. The schedule *shape* is settled by D13; these are the values it needs. | Seeding the weekly plan |
 | **Q30** | Is a full session too much ceremony for abs, which used to be one tick? | Whether a quick-log path is built |
 | **Q11** | Body weight / measurements — wanted at all? | Deliberately out of v1 |
 | **Q20** | Rest by feel or by the clock, and how long? | Whether the rest timer is a headline feature |
