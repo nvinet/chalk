@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# A newer push makes an older run irrelevant; do not pay for both.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      # No `npm ci`. The suite runs on the TypeScript source through Node's
+      # built-in runner and type stripping, and every import it reaches is
+      # either a builtin or first-party — the Drizzle imports it touches are
+      # type-only and strip away. Verified by running it against an empty
+      # directory with no node_modules at all.
+      #
+      # If this step ever fails with "Cannot find module", a test has acquired
+      # a real dependency: add `npm ci` here rather than deleting the comment.
+      - run: npm test
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # Typecheck does need the tree: TypeScript itself, @types/node, and the
+      # expo/tsconfig.base this project extends.
+      - run: npm ci
+
+      # No route-type generation step. tsconfig includes .expo/types, which
+      # expo-router writes during `expo start`, but that directory is
+      # gitignored so CI never has one — and typecheck passes without it,
+      # because the Href type falls back when the file is absent. Verified by
+      # moving it aside locally: 0 errors either way.
+      #
+      # The consequence is that CI does not validate typed routes, so a bad
+      # href fails locally but passes here. Generating them would mean a full
+      # `expo export`, which costs more than it is worth for a solo repo where
+      # every change is typechecked locally first. Revisit if a broken route
+      # ever reaches main.
+      - run: npm run typecheck
