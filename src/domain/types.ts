@@ -13,7 +13,7 @@
  *  - `types/sessions.ts` — what actually happened. Written constantly, and
  *    irreplaceable: the catalogue can be re-seeded, a session cannot.
  *
- * Sessions refer to the catalogue by id and never own it. That is why machines
+ * Sessions refer to the catalogue by id and never own it. That is why exercises
  * and muscle groups archive rather than delete, and why `SessionRequirement`
  * copies the counts that applied at the time instead of reading them back.
  *

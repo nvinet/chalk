@@ -42,6 +42,12 @@ StrengthLog and GymBook carry one because they infer which muscles a set worked
 and must weight secondaries (commonly at half a set). Chalk is told at logging
 time, so its numbers are exact. Do not reintroduce inference.
 
+**Granularity superseded by D17.** The claim that the Smith machine is "one row,
+not three" was wrong about the *unit*, not about the rule. The catalogue now
+models exercises, so those three are three rows. Everything above survives
+unchanged: the mapping still only says what is possible, credit still comes only
+from a set naming the group, and nothing is inferred.
+
 ### D5 — A machine counts only when properly recorded
 Reps **and** weight, or a duration. Weight of 0 is valid (bodyweight sled);
 reps of 0 is not. The spreadsheet's `"Done"` and `"N/A"` entries came from
@@ -184,6 +190,49 @@ that the app does not need them yet. Revisit only if it is ever worth gamifying.
 - #41 (targets: create, edit, track) and the target line in #38 leave v1.
 - Wireframe W09 has no v1 screen behind it.
 
+### D17 — The catalogue models exercises, not machines
+Agreed 7 Sep 2026 (issue #56). `Machine` becomes `Exercise`, and the `variant`
+label disappears into the exercise name. One row per column of the original
+spreadsheet.
+
+**Two reasons.** Cardio broke the old name: D12 made jogging and swimming
+distance-tracked, and neither is a machine. And "machine" was never the grain
+the source data used — the spreadsheet columns are already exercises. The cable
+station appears as three of them ("cable pull up", "cable forearm curl",
+"trycept pushdown"); the Smith machine appears as "SM incline bench press". The
+generated seed collapsed those into machine + variant, which was a modelling
+choice made in code rather than something the data did. D7 makes the
+spreadsheet the source of the taxonomy, so the taxonomy should match it.
+
+**Equipment is not modelled.** It lives in the name, as it did in the
+spreadsheet. Add a field only when a screen needs one — D2 already answers the
+"the bench is taken" case by offering another exercise for the same muscle
+group.
+
+`SkipReason.machineBusy` and `machineBroken` become `equipmentBusy` and
+`equipmentBroken`: it is the equipment that is busy, not the exercise.
+
+**What survives.** The `(exerciseId, muscleGroupId)` pairing still keys every
+history, chart and personal best. The many-to-many survives where it is genuine
+— hammer curl is biceps *and* forearms, one movement worked for two groups —
+it is simply rarer now that three movements on one frame are three rows.
+
+**The migration was regenerated from scratch rather than migrated.** Nothing had
+shipped: #49 was open, there were no tags, and `0000` existed only in git and on
+a simulator. N9 protects *released* history and there was none. A rename
+migration would have left permanent cruft in the very first migration for no
+benefit. That freedom ends the moment a build reaches the phone.
+
+**Consequence for Q26 (#3):** "which machines besides the Smith machine and
+cable station serve several groups?" becomes "which *exercises* serve several
+muscle groups?" — a smaller question, and hammer curl is the obvious answer.
+
+**Consequence for the seed:** rebuilt at exercise grain, 23 exercises. Two
+mappings the generated seed had invented beyond the spreadsheet are gone — the
+Smith machine as a squat, and the flat bench as a close-grip triceps press. At
+exercise grain those are separate exercises that never appear in the data; Q25
+and Q26 decide whether to add them.
+
 ---
 
 ## Open — ask, do not guess
@@ -192,7 +241,7 @@ that the app does not need them yet. Revisit only if it is ever worth gamifying.
 |---|---|---|
 | **Q27** | Required machine count for each group in each family. Default is 1; forearms currently 0. | Seed values; the meaning of a successful session |
 | **Q25** | Are the seed muscle group assignments right? Specifically rear delt row under shoulders, and whether hips should split into abduction and adduction. | Seed catalogue |
-| **Q26** | Which machines besides the Smith machine and cable station serve several groups? | Seed catalogue |
+| **Q26** | Which *exercises* serve several muscle groups? Hammer curl is biceps and forearms; are there others? Reframed by D17 — much smaller than when this modelled machines. | Seed catalogue |
 | **Q28** | What machines belong under Abs and Cardio? Both families are currently empty. | Abs and cardio being usable at all |
 | **Q6** | The legs sheet's unnamed seventh exercise (30 reps @ 27.5 kg, then 10 @ 25 kg). What is it? | One machine missing from the library |
 | **Q9** | Which families fall on which days, and how often. The schedule *shape* is settled by D13; these are the values it needs. | Seeding the weekly plan |

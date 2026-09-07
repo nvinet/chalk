@@ -12,8 +12,8 @@ import type { Id, IsoDate, IsoTimestamp } from "./common.ts";
 export type SessionStatus = "inProgress" | "finished" | "abandoned";
 
 export type SkipReason =
-  | "machineBusy"
-  | "machineBroken"
+  | "equipmentBusy"
+  | "equipmentBroken"
   | "injury"
   | "shortOfTime"
   | "other";
@@ -21,7 +21,7 @@ export type SkipReason =
 export interface SetEntry {
   id: Id;
   sessionId?: Id;
-  machineId: Id;
+  exerciseId: Id;
   muscleGroupId: Id;
   setNumber: number;
   reps?: number | null;
@@ -39,12 +39,12 @@ export interface SetEntry {
 
 /**
  * The requirement that applied when the session happened. Snapshotted onto
- * the session so that raising chest from one machine to two in November
+ * the session so that raising chest from one exercise to two in November
  * cannot retrospectively fail August.
  */
 export interface SessionRequirement {
   muscleGroupId: Id;
-  requiredMachineCount: number;
+  requiredExerciseCount: number;
 }
 
 export interface Session {

@@ -9,12 +9,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { toFamily, toMachine, toMuscleGroup, toTrackingType } from "../db/mappers.ts";
-import type { FamilyRow, MachineRow, MuscleGroupRow } from "../db/schema.ts";
+import { toFamily, toExercise, toMuscleGroup, toTrackingType } from "../db/mappers.ts";
+import type { FamilyRow, ExerciseRow, MuscleGroupRow } from "../db/schema.ts";
 
-const machineRow: MachineRow = {
-  id: "smith-machine",
-  name: "Smith machine",
+const exerciseRow: ExerciseRow = {
+  id: "hammer-curl",
+  name: "Hammer curl",
   aliases: ["SM incline bench press"],
   tracking: "weightReps",
   weightIncrementKg: 2.5,
@@ -23,16 +23,16 @@ const machineRow: MachineRow = {
   archived: false,
 };
 
-test("a machine row maps to a domain machine", () => {
-  const m = toMachine(machineRow);
-  assert.equal(m.id, "smith-machine");
+test("an exercise row maps to a domain exercise", () => {
+  const m = toExercise(exerciseRow);
+  assert.equal(m.id, "hammer-curl");
   assert.equal(m.tracking, "weightReps");
   assert.deepEqual(m.aliases, ["SM incline bench press"]);
 });
 
 test("all three tracking types survive the round trip", () => {
   for (const t of ["weightReps", "duration", "distance"] as const) {
-    assert.equal(toMachine({ ...machineRow, tracking: t }).tracking, t);
+    assert.equal(toExercise({ ...exerciseRow, tracking: t }).tracking, t);
   }
 });
 
@@ -70,6 +70,6 @@ test("an implicit muscle group keeps its flag through the mapping", () => {
   assert.equal(toMuscleGroup(row).implicit, true);
 });
 
-test("a machine with no aliases maps to an empty list, not undefined", () => {
-  assert.deepEqual(toMachine({ ...machineRow, aliases: [] }).aliases, []);
+test("an exercise with no aliases maps to an empty list, not undefined", () => {
+  assert.deepEqual(toExercise({ ...exerciseRow, aliases: [] }).aliases, []);
 });

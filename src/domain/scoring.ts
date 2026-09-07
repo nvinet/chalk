@@ -1,42 +1,42 @@
 /**
  * Chalk — scoring, history and personal bests.
  *
- * All of it keyed on the (machine, muscle group) pairing rather than the
- * machine alone: the Smith machine used for chest and the Smith machine used
- * for shoulders are different histories with different weights, and showing
- * the wrong one mid-set is worse than showing nothing.
+ * All of it keyed on the (exercise, muscle group) pairing rather than the
+ * exercise alone: hammer curl logged for biceps and hammer curl logged for
+ * forearms are different histories with different weights, and showing the
+ * wrong one mid-set is worse than showing nothing.
  */
 
 import { indexById, isSetLogged } from "./completion.ts";
 import { isWeightBased } from "./types.ts";
-import type { Catalogue, Id, Machine, Session, SetEntry } from "./types.ts";
+import type { Catalogue, Id, Exercise, Session, SetEntry } from "./types.ts";
 
-/** A machine used for a specific muscle group. The unit of history. */
+/** An exercise used for a specific muscle group. The unit of history. */
 export interface Pairing {
-  machineId: Id;
+  exerciseId: Id;
   muscleGroupId: Id;
 }
 
-export const pairingKey = (p: Pairing) => `${p.machineId}::${p.muscleGroupId}`;
+export const pairingKey = (p: Pairing) => `${p.exerciseId}::${p.muscleGroupId}`;
 
 const matches = (set: SetEntry, p: Pairing) =>
-  set.machineId === p.machineId && set.muscleGroupId === p.muscleGroupId;
+  set.exerciseId === p.exerciseId && set.muscleGroupId === p.muscleGroupId;
 
 /** Volume for one set. Zero for timed work and for anything not recorded. */
-export function setVolumeKg(set: SetEntry, machine: Machine): number {
-  if (!isSetLogged(set, machine.tracking)) return 0;
-  if (!isWeightBased(machine.tracking)) return 0;
+export function setVolumeKg(set: SetEntry, exercise: Exercise): number {
+  if (!isSetLogged(set, exercise.tracking)) return 0;
+  if (!isWeightBased(exercise.tracking)) return 0;
   return (set.reps ?? 0) * (set.weightKg ?? 0);
 }
 
 export function sessionVolumeKg(
   session: Session,
-  catalogue: Pick<Catalogue, "machines">,
+  catalogue: Pick<Catalogue, "exercises">,
 ): number {
-  const machinesById = indexById(catalogue.machines);
+  const exercisesById = indexById(catalogue.exercises);
   return session.sets.reduce((total, set) => {
-    const machine = machinesById.get(set.machineId);
-    return machine ? total + setVolumeKg(set, machine) : total;
+    const exercise = exercisesById.get(set.exerciseId);
+    return exercise ? total + setVolumeKg(set, exercise) : total;
   }, 0);
 }
 
@@ -46,16 +46,16 @@ export function sessionVolumeKg(
  */
 export function volumeByMuscleGroup(
   sessions: Session[],
-  catalogue: Pick<Catalogue, "machines">,
+  catalogue: Pick<Catalogue, "exercises">,
 ): Map<Id, { volumeKg: number; sets: number }> {
-  const machinesById = indexById(catalogue.machines);
+  const exercisesById = indexById(catalogue.exercises);
   const out = new Map<Id, { volumeKg: number; sets: number }>();
   for (const session of sessions) {
     for (const set of session.sets) {
-      const machine = machinesById.get(set.machineId);
-      if (!machine || !isSetLogged(set, machine.tracking)) continue;
+      const exercise = exercisesById.get(set.exerciseId);
+      if (!exercise || !isSetLogged(set, exercise.tracking)) continue;
       const row = out.get(set.muscleGroupId) ?? { volumeKg: 0, sets: 0 };
-      row.volumeKg += setVolumeKg(set, machine);
+      row.volumeKg += setVolumeKg(set, exercise);
       row.sets += 1;
       out.set(set.muscleGroupId, row);
     }
@@ -80,7 +80,7 @@ export interface PairingBest {
 export function bestsForPairing(
   sessions: Session[],
   pairing: Pairing,
-  machine: Machine,
+  exercise: Exercise,
 ): PairingBest {
   let heaviest: number | null = null;
   let bestE1rm: number | null = null;
@@ -88,8 +88,8 @@ export function bestsForPairing(
 
   for (const session of sessions) {
     for (const set of session.sets) {
-      if (!matches(set, pairing) || !isSetLogged(set, machine.tracking)) continue;
-      if (!isWeightBased(machine.tracking)) continue;
+      if (!matches(set, pairing) || !isSetLogged(set, exercise.tracking)) continue;
+      if (!isWeightBased(exercise.tracking)) continue;
 
       const weight = set.weightKg ?? 0;
       const reps = set.reps ?? 0;
@@ -98,7 +98,7 @@ export function bestsForPairing(
       const e1rm = estimatedOneRepMaxKg(reps, weight);
       if (e1rm !== null) bestE1rm = bestE1rm === null ? e1rm : Math.max(bestE1rm, e1rm);
 
-      const volume = setVolumeKg(set, machine);
+      const volume = setVolumeKg(set, exercise);
       bestVolume = bestVolume === null ? volume : Math.max(bestVolume, volume);
     }
   }
@@ -123,27 +123,27 @@ export interface NewPersonalBest {
 export function personalBestsInSession(
   session: Session,
   priorSessions: Session[],
-  catalogue: Pick<Catalogue, "machines">,
+  catalogue: Pick<Catalogue, "exercises">,
 ): NewPersonalBest[] {
-  const machinesById = indexById(catalogue.machines);
+  const exercisesById = indexById(catalogue.exercises);
   const earlier = priorSessions.filter((s) => s.id !== session.id);
   const seen = new Set<string>();
   const out: NewPersonalBest[] = [];
 
   for (const set of session.sets) {
-    const machine = machinesById.get(set.machineId);
+    const exercise = exercisesById.get(set.exerciseId);
     // Cardio has no personal bests yet — "furthest" and "longest" are Q3's
     // question and belong to M4 (D12).
-    if (!machine || !isWeightBased(machine.tracking)) continue;
-    if (!isSetLogged(set, machine.tracking)) continue;
+    if (!exercise || !isWeightBased(exercise.tracking)) continue;
+    if (!isSetLogged(set, exercise.tracking)) continue;
 
-    const pairing = { machineId: set.machineId, muscleGroupId: set.muscleGroupId };
+    const pairing = { exerciseId: set.exerciseId, muscleGroupId: set.muscleGroupId };
     const key = pairingKey(pairing);
     if (seen.has(key)) continue;
     seen.add(key);
 
-    const before = bestsForPairing(earlier, pairing, machine);
-    const now = bestsForPairing([session], pairing, machine);
+    const before = bestsForPairing(earlier, pairing, exercise);
+    const now = bestsForPairing([session], pairing, exercise);
 
     const checks: Array<[NewPersonalBest["kind"], number | null, number | null]> = [
       ["heaviest", now.heaviestKg, before.heaviestKg],
@@ -169,28 +169,28 @@ export interface LastTime {
 }
 
 /**
- * What he did last time on this machine for this muscle group — the single
+ * What he did last time on this exercise for this muscle group — the single
  * most important thing on the logging screen (B6).
  */
 export function lastTimeForPairing(
   sessions: Session[],
   pairing: Pairing,
-  machine: Machine,
+  exercise: Exercise,
   before?: string,
 ): LastTime | null {
   const candidates = sessions
     .filter((s) => (before ? s.date < before : true))
-    .filter((s) => s.sets.some((set) => matches(set, pairing) && isSetLogged(set, machine.tracking)))
+    .filter((s) => s.sets.some((set) => matches(set, pairing) && isSetLogged(set, exercise.tracking)))
     .sort((a, b) => (a.date < b.date ? 1 : -1));
 
   const session = candidates[0];
   if (!session) return null;
 
   const sets = session.sets.filter(
-    (set) => matches(set, pairing) && isSetLogged(set, machine.tracking),
+    (set) => matches(set, pairing) && isSetLogged(set, exercise.tracking),
   );
 
-  if (machine.tracking === "duration") {
+  if (exercise.tracking === "duration") {
     const seconds = sets.reduce((t, s) => t + (s.durationSeconds ?? 0), 0);
     return {
       date: session.date,
@@ -200,7 +200,7 @@ export function lastTimeForPairing(
     };
   }
 
-  if (machine.tracking === "distance") {
+  if (exercise.tracking === "distance") {
     const metres = sets.reduce((t, s) => t + (s.distanceM ?? 0), 0);
     return {
       date: session.date,
@@ -235,16 +235,16 @@ export function formatKg(kg: number): string {
 export function topSetSeries(
   sessions: Session[],
   pairing: Pairing,
-  machine: Machine,
+  exercise: Exercise,
 ): Array<{ date: string; weightKg: number }> {
-  // A non-weight machine has no top set; charting one would draw a flat line
+  // A non-weight exercise has no top set; charting one would draw a flat line
   // of zeroes (D12).
-  if (!isWeightBased(machine.tracking)) return [];
+  if (!isWeightBased(exercise.tracking)) return [];
 
   return sessions
     .map((session) => {
       const weights = session.sets
-        .filter((set) => matches(set, pairing) && isSetLogged(set, machine.tracking))
+        .filter((set) => matches(set, pairing) && isSetLogged(set, exercise.tracking))
         .map((set) => set.weightKg ?? 0);
       return weights.length
         ? { date: session.date, weightKg: Math.max(...weights) }

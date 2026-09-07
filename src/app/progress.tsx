@@ -4,7 +4,7 @@ export default function ProgressScreen() {
   return (
     <ScreenPlaceholder
       title="Progress"
-      description="Family to muscle group to machine, and a chart per pairing."
+      description="Family to muscle group to exercise, and a chart per pairing."
       issue="#37"
     />
   );

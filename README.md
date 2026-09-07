@@ -6,31 +6,32 @@ lives on the device and nothing leaves it without an explicit action.
 
 ## Why it exists
 
-The spreadsheet it replaces had two levels: a training day, and the machines
+The spreadsheet it replaces had two levels: a training day, and the exercises
 used on it. That is the limitation that prompted the app. Existing trackers
 were not a fit either — they assume a session goes to plan, so every deviation
 becomes a negotiation with the interface. If the bench is taken, Chalk lets
-another chest machine satisfy chest, and nothing is recorded as "missed".
+another chest exercise satisfy chest, and nothing is recorded as "missed".
 
 ## The model
 
-Three levels: **family → muscle group → machine.**
+Three levels: **family → muscle group → exercise.**
 
 - A **family** is a training day: push, pull, legs, abs, cardio.
 - A **muscle group** sits inside a family and is what a session is scored on.
-- A **machine** sits under one or more muscle groups, possibly across families.
-  The Smith machine is chest and shoulders on push, and quads on legs — one
-  machine, not three.
+- An **exercise** sits under one or more muscle groups, possibly across
+  families. Hammer curl is biceps and forearms — one movement, two groups.
+
+Exercises, not machines. Equipment is not modelled: the original spreadsheet
+called a column "SM incline bench press", and so does the catalogue.
 
 Abs and cardio have no muscle groups; internally they carry a single implicit
 group so one completion rule covers every family.
 
 ### A set names its muscle group
 
-A set records both the machine and the muscle group it was performed for.
-Logging the Smith machine for chest does nothing for shoulders, and the same
-machine may legitimately appear twice in a session as two entries for two
-groups.
+A set records both the exercise and the muscle group it was performed for.
+Logging hammer curl for biceps does nothing for forearms, and the same exercise
+may legitimately appear twice in a session as two entries for two groups.
 
 Because the set is explicit about this, Chalk needs no primary/secondary muscle
 weighting. Other trackers carry one because they *infer* which muscles a set
@@ -38,11 +39,11 @@ worked and must discount secondaries. Chalk is told, so its numbers are exact.
 
 ### Completion
 
-1. A machine counts as logged for a group when a set against that pairing
-   records **reps and weight**, or a duration for a timed machine. A weight of
+1. An exercise counts as logged for a group when a set against that pairing
+   records **reps and weight**, or a duration for a timed exercise. A weight of
    0 is valid (bodyweight sled); 0 reps is not.
-2. A muscle group succeeds when the number of **distinct machines** logged
-   against it reaches its required count. Many sets on one machine count once.
+2. A muscle group succeeds when the number of **distinct exercises** logged
+   against it reaches its required count. Many sets on one exercise count once.
    A required count of 0 means optional — trainable, never blocking.
 3. A session succeeds when every group in its requirements has succeeded.
 
@@ -53,8 +54,8 @@ retrospectively fails a past session.
 ### The pairing
 
 History, "last time", charts and personal bests are all keyed on
-`(machine, muscle group)` — never on the machine alone. Smith machine for chest
-and Smith machine for shoulders are different histories with different weights.
+`(exercise, muscle group)` — never on the exercise alone. Hammer curl for biceps
+and hammer curl for forearms are different histories with different weights.
 
 ## Stack
 
@@ -75,7 +76,7 @@ plus the planning material in `docs/`. The domain layer, database schema and
 session-logging screens described above are designed but not yet built.
 
 Several decisions are still open and are listed in `docs/decisions.md` — most
-significantly the required machine count per group (Q27), and which machines
+significantly the required exercise count per group (Q27), and which exercises
 belong under abs and cardio (Q28, both families currently empty). These block
 the corresponding features; they are questions to ask, not to guess at.
 
@@ -145,9 +146,9 @@ mid-session must lose nothing.
 
 **One database, deliberately.** Four foreign keys run from sessions into the
 catalogue, and SQLite does not enforce foreign keys across attached databases.
-Every history, chart and personal best is keyed on the (machine, muscle group)
-pairing, so a set pointing at a machine that no longer exists would break
-"last time" silently. That is why machines and muscle groups archive rather
+Every history, chart and personal best is keyed on the (exercise, muscle group)
+pairing, so a set pointing at an exercise that no longer exists would break
+"last time" silently. That is why exercises and muscle groups archive rather
 than delete.
 
 ## Conventions

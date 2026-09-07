@@ -10,8 +10,8 @@
  * module directly. The schema import is type-only and strips away at runtime.
  */
 
-import type { Family, Machine, MuscleGroup, TrackingType } from "../domain/types.ts";
-import type { FamilyRow, MachineRow, MuscleGroupRow } from "./schema.ts";
+import type { Family, Exercise, MuscleGroup, TrackingType } from "../domain/types.ts";
+import type { FamilyRow, ExerciseRow, MuscleGroupRow } from "./schema.ts";
 
 const TRACKING_TYPES: readonly string[] = ["weightReps", "duration", "distance"];
 
@@ -47,7 +47,7 @@ export function toMuscleGroup(row: MuscleGroupRow): MuscleGroup {
   };
 }
 
-export function toMachine(row: MachineRow): Machine {
+export function toExercise(row: ExerciseRow): Exercise {
   return {
     id: row.id,
     name: row.name,

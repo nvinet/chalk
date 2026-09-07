@@ -4,7 +4,7 @@
  * These reference the catalogue and are referenced by nothing. Note the delete
  * behaviour, which is the whole distinction in one line: session_requirements
  * and set_entries cascade from their *session*, but their references to
- * muscle_groups and machines restrict. A machine that history mentions cannot
+ * muscle_groups and exercises restrict. An exercise that history mentions cannot
  * be deleted — it archives instead.
  *
  * Irreplaceable, unlike the catalogue: re-seeding cannot bring a session back.
@@ -12,7 +12,7 @@
 
 import { index, integer, real, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-import { families, machines, muscleGroups } from "./catalogue.ts";
+import { families, exercises, muscleGroups } from "./catalogue.ts";
 import { now } from "./common.ts";
 
 export const sessions = sqliteTable(
@@ -35,7 +35,7 @@ export const sessions = sqliteTable(
 
 /**
  * The requirement that applied when the session happened, snapshotted so that
- * raising chest from one machine to two in November cannot retrospectively
+ * raising chest from one exercise to two in November cannot retrospectively
  * fail August.
  */
 export const sessionRequirements = sqliteTable(
@@ -48,14 +48,14 @@ export const sessionRequirements = sqliteTable(
       .notNull()
       .references(() => muscleGroups.id),
     position: integer("position").notNull(),
-    requiredMachineCount: integer("required_machine_count").notNull(),
+    requiredExerciseCount: integer("required_exercise_count").notNull(),
   },
   (t) => [primaryKey({ columns: [t.sessionId, t.muscleGroupId] })],
 );
 
 /**
- * One recorded set. Carries machine AND muscle group, which is what lets the
- * same machine be logged twice in a session for two different groups without
+ * One recorded set. Carries exercise AND muscle group, which is what lets the
+ * same exercise be logged twice in a session for two different groups without
  * either use counting for the other.
  *
  * Written one row at a time as he taps, never batched at the end (N7).
@@ -67,9 +67,9 @@ export const setEntries = sqliteTable(
     sessionId: text("session_id")
       .notNull()
       .references(() => sessions.id, { onDelete: "cascade" }),
-    machineId: text("machine_id")
+    exerciseId: text("exercise_id")
       .notNull()
-      .references(() => machines.id),
+      .references(() => exercises.id),
     muscleGroupId: text("muscle_group_id")
       .notNull()
       .references(() => muscleGroups.id),
@@ -95,12 +95,12 @@ export const setEntries = sqliteTable(
   (t) => [
     uniqueIndex("set_entries_unique_idx").on(
       t.sessionId,
-      t.machineId,
+      t.exerciseId,
       t.muscleGroupId,
       t.setNumber,
     ),
-    // The index that makes "last time on this machine for this group" fast.
-    index("set_entries_pairing_idx").on(t.machineId, t.muscleGroupId),
+    // The index that makes "last time on this exercise for this group" fast.
+    index("set_entries_pairing_idx").on(t.exerciseId, t.muscleGroupId),
     index("set_entries_session_idx").on(t.sessionId),
   ],
 );

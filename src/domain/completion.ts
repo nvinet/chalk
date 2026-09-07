@@ -3,11 +3,11 @@
  *
  * Three rules, applied in order:
  *
- *  1. A machine counts as logged for a muscle group when at least one set
+ *  1. An exercise counts as logged for a muscle group when at least one set
  *     against that pairing records both reps and weight — or a duration, for
- *     a timed machine. A machine touched but not written down does not count.
+ *     a timed exercise. An exercise touched but not written down does not count.
  *
- *  2. A muscle group succeeds when the number of *distinct* machines logged
+ *  2. A muscle group succeeds when the number of *distinct* exercises logged
  *     against it reaches its required count. A required count of 0 makes the
  *     group optional: shown, trainable, never blocking.
  *
@@ -16,14 +16,14 @@
  *
  * The rule is deliberately exact rather than approximate. Because every set
  * names the muscle group it was performed for, nothing has to be inferred
- * from the machine, and there is no need for the primary/secondary muscle
+ * from the exercise, and there is no need for the primary/secondary muscle
  * weighting that inference-based trackers rely on.
  */
 
 import type {
   Catalogue,
   Id,
-  Machine,
+  Exercise,
   Session,
   SetEntry,
   TrackingType,
@@ -51,7 +51,7 @@ export function isSetLogged(set: SetEntry, tracking: TrackingType): boolean {
       return isPositive(set.distanceM);
     case "weightReps":
       // Reps must be positive. Weight must be present but may be zero: logging
-      // is never blocked. On a bodyweight machine a 0 is an incomplete entry
+      // is never blocked. On a bodyweight exercise a 0 is an incomplete entry
       // rather than a correct one — he enters his bodyweight as the load
       // (D14) — so it warns elsewhere, it does not fail here.
       return isPositive(set.reps) && isNonNegative(set.weightKg);
@@ -67,21 +67,21 @@ function isNonNegative(v: number | null | undefined): boolean {
 }
 
 /**
- * Rule 1, applied across a session: the distinct machines properly logged
- * for one muscle group. Multiple sets on the same machine count once —
- * the rule counts machines, not sets.
+ * Rule 1, applied across a session: the distinct exercises properly logged
+ * for one muscle group. Multiple sets on the same exercise count once —
+ * the rule counts exercises, not sets.
  */
-export function machinesLoggedForGroup(
+export function exercisesLoggedForGroup(
   session: Session,
   muscleGroupId: Id,
-  machinesById: ReadonlyMap<Id, Machine>,
+  exercisesById: ReadonlyMap<Id, Exercise>,
 ): Id[] {
   const found = new Set<Id>();
   for (const set of session.sets) {
     if (set.muscleGroupId !== muscleGroupId) continue;
-    const machine = machinesById.get(set.machineId);
-    if (!machine) continue;
-    if (isSetLogged(set, machine.tracking)) found.add(set.machineId);
+    const exercise = exercisesById.get(set.exerciseId);
+    if (!exercise) continue;
+    if (isSetLogged(set, exercise.tracking)) found.add(set.exerciseId);
   }
   return [...found];
 }
@@ -89,8 +89,8 @@ export function machinesLoggedForGroup(
 export interface MuscleGroupOutcome {
   muscleGroupId: Id;
   required: number;
-  /** Distinct machines properly logged for this group in this session. */
-  machineIds: Id[];
+  /** Distinct exercises properly logged for this group in this session. */
+  exerciseIds: Id[];
   loggedCount: number;
   met: boolean;
   /** True when required is 0 — visible in the session but never blocking. */
@@ -115,16 +115,16 @@ export function evaluateMuscleGroup(
   session: Session,
   muscleGroupId: Id,
   required: number,
-  machinesById: ReadonlyMap<Id, Machine>,
+  exercisesById: ReadonlyMap<Id, Exercise>,
 ): MuscleGroupOutcome {
-  const machineIds = machinesLoggedForGroup(session, muscleGroupId, machinesById);
+  const exerciseIds = exercisesLoggedForGroup(session, muscleGroupId, exercisesById);
   const optional = required <= 0;
   return {
     muscleGroupId,
     required,
-    machineIds,
-    loggedCount: machineIds.length,
-    met: optional || machineIds.length >= required,
+    exerciseIds,
+    loggedCount: exerciseIds.length,
+    met: optional || exerciseIds.length >= required,
     optional,
   };
 }
@@ -132,16 +132,16 @@ export function evaluateMuscleGroup(
 /** Rules 2 and 3 for a whole session. */
 export function evaluateSession(
   session: Session,
-  catalogue: Pick<Catalogue, "machines">,
+  catalogue: Pick<Catalogue, "exercises">,
 ): SessionOutcome {
-  const machinesById = indexById(catalogue.machines);
+  const exercisesById = indexById(catalogue.exercises);
 
   const groups = session.requirements.map((req) =>
     evaluateMuscleGroup(
       session,
       req.muscleGroupId,
-      req.requiredMachineCount,
-      machinesById,
+      req.requiredExerciseCount,
+      exercisesById,
     ),
   );
 
@@ -155,8 +155,8 @@ export function evaluateSession(
     requiredGroupsMet: required.filter((g) => g.met).length,
     requiredGroupsTotal: required.length,
     attended: session.sets.some((set) => {
-      const machine = machinesById.get(set.machineId);
-      return machine ? isSetLogged(set, machine.tracking) : false;
+      const exercise = exercisesById.get(set.exerciseId);
+      return exercise ? isSetLogged(set, exercise.tracking) : false;
     }),
   };
 }
@@ -179,22 +179,22 @@ export function requirementsForFamily(
     .sort((a, b) => a.position - b.position)
     .map((fmg) => ({
       muscleGroupId: fmg.muscleGroupId,
-      requiredMachineCount: fmg.requiredMachineCount,
+      requiredExerciseCount: fmg.requiredExerciseCount,
     }));
 }
 
-/** Machines mapped to a muscle group — the list behind wireframe W3. */
-export function machinesForMuscleGroup(
+/** Exercises mapped to a muscle group — the list behind wireframe W3. */
+export function exercisesForMuscleGroup(
   muscleGroupId: Id,
-  catalogue: Pick<Catalogue, "machines" | "machineMuscleGroups">,
-): Array<{ machine: Machine; variant?: string | null }> {
-  const machinesById = indexById(catalogue.machines);
-  return catalogue.machineMuscleGroups
+  catalogue: Pick<Catalogue, "exercises" | "exerciseMuscleGroups">,
+): Exercise[] {
+  const exercisesById = indexById(catalogue.exercises);
+  return catalogue.exerciseMuscleGroups
     .filter((m) => m.muscleGroupId === muscleGroupId)
     .flatMap((m) => {
-      const machine = machinesById.get(m.machineId);
-      if (!machine || machine.archived) return [];
-      return [{ machine, variant: m.variant }];
+      const exercise = exercisesById.get(m.exerciseId);
+      if (!exercise || exercise.archived) return [];
+      return [exercise];
     });
 }
 

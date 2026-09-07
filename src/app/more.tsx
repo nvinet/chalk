@@ -57,7 +57,7 @@ export default function MoreScreen() {
         </ThemedText>
         <ThemedView type="backgroundElement" style={styles.card}>
           <HintRow title="Families" hint={<ThemedText type="small">#15</ThemedText>} />
-          <HintRow title="Machines" hint={<ThemedText type="small">#16</ThemedText>} />
+          <HintRow title="Exercises" hint={<ThemedText type="small">#16</ThemedText>} />
           <HintRow title="Settings" hint={<ThemedText type="small">#48</ThemedText>} />
           <HintRow title="Export" hint={<ThemedText type="small">#30</ThemedText>} />
         </ThemedView>

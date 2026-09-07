@@ -8,13 +8,16 @@ Read `docs/decisions.md` before changing anything in `src/domain/`.
 
 ## The model — get this right, everything depends on it
 
-Three levels: **family → muscle group → machine.**
+Three levels: **family → muscle group → exercise.**
 
 - A **family** is a training day: push, pull, legs, abs, cardio.
 - A **muscle group** sits inside a family and is what a session is scored on.
-- A **machine** sits under one or more muscle groups, **possibly across
-  families**. The Smith machine is chest and shoulders in push, and quads in
-  legs. It is *one* machine row, not three.
+- An **exercise** sits under one or more muscle groups, **possibly across
+  families**. Hammer curl is biceps and forearms — one movement, two groups.
+
+Exercises, not machines (D17). The Smith machine is not a row; "SM incline
+bench press" is. Equipment is not modelled — it lives in the name, exactly as
+the original spreadsheet had it.
 
 Abs and cardio have **no muscle groups**. They are modelled with a single
 `implicit: true` group so one completion rule covers every family. Never show
@@ -23,7 +26,7 @@ an implicit group in the UI.
 ### A set names its muscle group
 
 `SetEntry` carries **both** `machineId` and `muscleGroupId`. Logging the Smith
-machine for chest does nothing for shoulders. The same machine may appear twice
+exercise for chest does nothing for shoulders. The same exercise may appear twice
 in one session as two separate entries for two groups — that is correct
 behaviour, not a duplicate.
 
@@ -33,16 +36,16 @@ add inference, weighting, or "counts as half a set" logic.
 
 ### The completion rule
 
-1. A machine counts as logged for a group when at least one **working** set
-   against that pairing records whatever that machine measures: **both reps and
+1. An exercise counts as logged for a group when at least one **working** set
+   against that pairing records whatever that exercise measures: **both reps and
    weight**, or a duration, or a distance. Reps may not be 0. Weight of `0` is
-   still accepted — logging is never blocked — but on a bodyweight machine it
+   still accepted — logging is never blocked — but on a bodyweight exercise it
    is an incomplete entry: he enters his bodyweight as the load (D14), so warn
    on a 0 rather than treating it as correct.
    **Warm-up sets never count** (D15): not for completion, not for personal
    bests, not for volume.
-2. A muscle group succeeds when the number of **distinct machines** logged
-   against it reaches its required count. Many sets on one machine count once.
+2. A muscle group succeeds when the number of **distinct exercises** logged
+   against it reaches its required count. Many sets on one exercise count once.
    **A required count of 0 means optional** — shown, trainable, never blocking.
 3. A session succeeds when every group in its requirements has succeeded.
 
@@ -55,8 +58,8 @@ family's counts must never retrospectively fail a past session.
 ### The pairing
 
 History, "last time", charts and personal bests are all keyed on
-`(machineId, muscleGroupId)` — **never on the machine alone**. Smith machine for
-chest and Smith machine for shoulders are different histories with different
+`(exerciseId, muscleGroupId)` — **never on the exercise alone**. Hammer curl for
+biceps and hammer curl for forearms are different histories with different
 weights. Showing the wrong one mid-set is worse than showing nothing.
 
 ## Architecture rules
@@ -94,7 +97,7 @@ were computed independently from the raw file before the code existed.
 **If a change makes those tests fail, the change is wrong** unless a decision in
 `docs/decisions.md` has changed too. Five of eleven pass. The important cases:
 
-- `pull-20260829` — four back machines, no curls. Biceps must read **zero**.
+- `pull-20260829` — four back exercises, no curls. Biceps must read **zero**.
 - `push-20260830` — lateral raises recorded as `"Done"` with no numbers. Must
   **not** count.
 - `legs-20260831` — hack squat recorded `"No"`; quads still met via the quad
@@ -112,11 +115,11 @@ were computed independently from the raw file before the code existed.
 
 - Do not write `tracking === "duration"`. There are three tracking types
   (`weightReps | duration | distance`, D12) and that comparison silently treats
-  distance as a weights machine. Ask whether the measure is weight-based.
+  distance as a weights exercise. Ask whether the measure is weight-based.
 - **Do not use Realm.** Deprecated Sept 2024; Device Sync shut down Sept 2025.
 - **Do not put training data in AsyncStorage.** No queries, indexes or schema.
 - Do not add primary/secondary muscle weighting (see above).
-- Do not infer a muscle group from a machine. Ask, or read it off the set.
+- Do not infer a muscle group from an exercise. Ask, or read it off the set.
 - Do not import the old spreadsheet. That was dropped deliberately — the
   spreadsheet is the source of the *taxonomy*, not of data.
 
@@ -125,8 +128,8 @@ were computed independently from the raw file before the code existed.
 These are unanswered and marked in `docs/decisions.md`. If a task needs one,
 stop and ask rather than inventing an answer:
 
-- **Q27** — required machine count per group. Forearms currently ships as `0`.
-- **Q28** — which machines belong under Abs and Cardio. Both are empty, and each
+- **Q27** — required exercise count per group. Forearms currently ships as `0`.
+- **Q28** — which exercises belong under Abs and Cardio. Both are empty, and each
   one named also needs its measure (D12).
 - **Q25, Q26, Q6** — the seed taxonomy is still a proposal, not confirmed.
 - **Q9** — which families fall on which days. The schedule shape is settled by

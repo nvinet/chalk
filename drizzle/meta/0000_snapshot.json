@@ -1,9 +1,147 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "057d9e69-0062-4013-ac33-0029c9c64dbb",
+  "id": "04494a38-aab9-44e3-a959-b9249921b301",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
+    "exercise_muscle_groups": {
+      "name": "exercise_muscle_groups",
+      "columns": {
+        "exercise_id": {
+          "name": "exercise_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "muscle_group_id": {
+          "name": "muscle_group_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "exercise_muscle_groups_exercise_id_exercises_id_fk": {
+          "name": "exercise_muscle_groups_exercise_id_exercises_id_fk",
+          "tableFrom": "exercise_muscle_groups",
+          "tableTo": "exercises",
+          "columnsFrom": [
+            "exercise_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "exercise_muscle_groups_muscle_group_id_muscle_groups_id_fk": {
+          "name": "exercise_muscle_groups_muscle_group_id_muscle_groups_id_fk",
+          "tableFrom": "exercise_muscle_groups",
+          "tableTo": "muscle_groups",
+          "columnsFrom": [
+            "muscle_group_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "exercise_muscle_groups_exercise_id_muscle_group_id_pk": {
+          "columns": [
+            "exercise_id",
+            "muscle_group_id"
+          ],
+          "name": "exercise_muscle_groups_exercise_id_muscle_group_id_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "exercises": {
+      "name": "exercises",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "aliases": {
+          "name": "aliases",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'[]'"
+        },
+        "tracking": {
+          "name": "tracking",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'weightReps'"
+        },
+        "weight_increment_kg": {
+          "name": "weight_increment_kg",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 2.5
+        },
+        "default_rest_seconds": {
+          "name": "default_rest_seconds",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 90
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "families": {
       "name": "families",
       "columns": {
@@ -75,8 +213,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "required_machine_count": {
-          "name": "required_machine_count",
+        "required_exercise_count": {
+          "name": "required_exercise_count",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
@@ -122,151 +260,6 @@
           "name": "family_muscle_groups_family_id_muscle_group_id_pk"
         }
       },
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "machine_muscle_groups": {
-      "name": "machine_muscle_groups",
-      "columns": {
-        "machine_id": {
-          "name": "machine_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "muscle_group_id": {
-          "name": "muscle_group_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "variant": {
-          "name": "variant",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "position": {
-          "name": "position",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "machine_muscle_groups_machine_id_machines_id_fk": {
-          "name": "machine_muscle_groups_machine_id_machines_id_fk",
-          "tableFrom": "machine_muscle_groups",
-          "tableTo": "machines",
-          "columnsFrom": [
-            "machine_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "machine_muscle_groups_muscle_group_id_muscle_groups_id_fk": {
-          "name": "machine_muscle_groups_muscle_group_id_muscle_groups_id_fk",
-          "tableFrom": "machine_muscle_groups",
-          "tableTo": "muscle_groups",
-          "columnsFrom": [
-            "muscle_group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "machine_muscle_groups_machine_id_muscle_group_id_pk": {
-          "columns": [
-            "machine_id",
-            "muscle_group_id"
-          ],
-          "name": "machine_muscle_groups_machine_id_muscle_group_id_pk"
-        }
-      },
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "machines": {
-      "name": "machines",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "aliases": {
-          "name": "aliases",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'[]'"
-        },
-        "tracking": {
-          "name": "tracking",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'weightReps'"
-        },
-        "weight_increment_kg": {
-          "name": "weight_increment_kg",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 2.5
-        },
-        "default_rest_seconds": {
-          "name": "default_rest_seconds",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 90
-        },
-        "notes": {
-          "name": "notes",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "archived": {
-          "name": "archived",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
@@ -341,8 +334,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "required_machine_count": {
-          "name": "required_machine_count",
+        "required_exercise_count": {
+          "name": "required_exercise_count",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
@@ -497,8 +490,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "machine_id": {
-          "name": "machine_id",
+        "exercise_id": {
+          "name": "exercise_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -598,7 +591,7 @@
           "name": "set_entries_unique_idx",
           "columns": [
             "session_id",
-            "machine_id",
+            "exercise_id",
             "muscle_group_id",
             "set_number"
           ],
@@ -607,7 +600,7 @@
         "set_entries_pairing_idx": {
           "name": "set_entries_pairing_idx",
           "columns": [
-            "machine_id",
+            "exercise_id",
             "muscle_group_id"
           ],
           "isUnique": false
@@ -634,12 +627,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "set_entries_machine_id_machines_id_fk": {
-          "name": "set_entries_machine_id_machines_id_fk",
+        "set_entries_exercise_id_exercises_id_fk": {
+          "name": "set_entries_exercise_id_exercises_id_fk",
           "tableFrom": "set_entries",
-          "tableTo": "machines",
+          "tableTo": "exercises",
           "columnsFrom": [
-            "machine_id"
+            "exercise_id"
           ],
           "columnsTo": [
             "id"

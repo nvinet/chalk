@@ -23,7 +23,7 @@ export const Colors = {
     border: '#D8D9DE',
     /** Interactive things and the selected tab. */
     accent: '#208AEF',
-    /** A muscle group that has met its required machine count. */
+    /** A muscle group that has met its required exercise count. */
     met: '#2E7D32',
     /** A group still outstanding — informational, never alarming. */
     outstanding: '#8A6D00',

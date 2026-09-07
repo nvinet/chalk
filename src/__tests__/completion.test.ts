@@ -16,24 +16,24 @@ import {
   evaluateSession,
   evaluateMuscleGroup,
   isSetLogged,
-  machinesLoggedForGroup,
-  machinesForMuscleGroup,
+  exercisesLoggedForGroup,
+  exercisesForMuscleGroup,
   outstandingGroups,
   requirementsForFamily,
   indexById,
 } from "../domain/completion.ts";
 import { seedCatalogue } from "../db/seed.ts";
 import { historicalSessions, needsFixtures } from "./fixtures.generated.ts";
-import type { Machine, Session, SetEntry } from "../domain/types.ts";
+import type { Exercise, Session, SetEntry } from "../domain/types.ts";
 
-const machines = seedCatalogue.machines;
-const machinesById = indexById(machines);
+const exercises = seedCatalogue.exercises;
+const exercisesById = indexById(exercises);
 
 /** Every historical session used a required count of 1 for every group. */
 function outcomeFor(id: string) {
   const session = historicalSessions.find((s) => s.id === id);
   if (!session) throw new Error(`fixture ${id} missing`);
-  return evaluateSession(session, { machines });
+  return evaluateSession(session, { exercises });
 }
 
 // ---------------------------------------------------------------------------
@@ -44,10 +44,10 @@ test("scores the eleven logged sessions exactly as §3.4 of the plan does", need
   const expected: Record<string, boolean> = {
     "legs-20260817": true,
     "push-20260818": true,
-    "pull-20260819": false, // forearms: one machine, marked N/A
-    "push-20260820": false, // no chest machine at all
+    "pull-20260819": false, // forearms: one exercise, marked N/A
+    "push-20260820": false, // no chest exercise at all
     "legs-20260821": true, // spreadsheet failed this only on its column count
-    "push-20260822": false, // no tricep machine at all
+    "push-20260822": false, // no tricep exercise at all
     "pull-20260823": false, // forearms again
     "pull-20260829": false, // back only
     "push-20260830": true,
@@ -62,7 +62,7 @@ test("scores the eleven logged sessions exactly as §3.4 of the plan does", need
 
 test("five of the eleven sessions succeed", needsFixtures, () => {
   const passes = historicalSessions.filter(
-    (s) => evaluateSession(s, { machines }).successful,
+    (s) => evaluateSession(s, { exercises }).successful,
   );
   assert.equal(passes.length, 5);
 });
@@ -74,15 +74,15 @@ test("legs improves where the spreadsheet's all-or-nothing rule failed", needsFi
   }
 });
 
-test("31 August legs passes because quads had a second machine", needsFixtures, () => {
+test("31 August legs passes because quads had a second exercise", needsFixtures, () => {
   const outcome = outcomeFor("legs-20260831");
   const quads = outcome.groups.find((g) => g.muscleGroupId === "quads");
   // Hack squat was recorded as "No"; the quad extension carried the group.
-  assert.deepEqual(quads?.machineIds, ["quad-extension"]);
+  assert.deepEqual(quads?.exerciseIds, ["quad-extension"]);
   assert.equal(quads?.met, true);
 });
 
-test("pull fails on forearms, a group with a single machine", needsFixtures, () => {
+test("pull fails on forearms, a group with a single exercise", needsFixtures, () => {
   for (const id of ["pull-20260819", "pull-20260823"]) {
     const forearms = outcomeFor(id).groups.find(
       (g) => g.muscleGroupId === "forearms",
@@ -92,13 +92,13 @@ test("pull fails on forearms, a group with a single machine", needsFixtures, () 
   }
 });
 
-test("29 August pull did four back machines and no arm work at all", needsFixtures, () => {
+test("29 August pull did four back exercises and no arm work at all", needsFixtures, () => {
   const outcome = outcomeFor("pull-20260829");
   const back = outcome.groups.find((g) => g.muscleGroupId === "back");
   const biceps = outcome.groups.find((g) => g.muscleGroupId === "biceps");
   assert.equal(back?.loggedCount, 4);
   // The rows must not credit biceps. This is the whole reason the muscle
-  // group lives on the set rather than being inferred from the machine.
+  // group lives on the set rather than being inferred from the exercise.
   assert.equal(biceps?.loggedCount, 0);
   assert.equal(outcome.successful, false);
 });
@@ -107,20 +107,20 @@ test("29 August pull did four back machines and no arm work at all", needsFixtur
 // Rule 1 — what counts as logged
 // ---------------------------------------------------------------------------
 
-const liftMachine: Machine = {
+const liftExercise: Exercise = {
   id: "m",
-  name: "Test machine",
+  name: "Test exercise",
   aliases: [],
   tracking: "weightReps",
   weightIncrementKg: 2.5,
   defaultRestSeconds: 90,
 };
-const timedMachine: Machine = { ...liftMachine, id: "t", tracking: "duration" };
+const timedExercise: Exercise = { ...liftExercise, id: "t", tracking: "duration" };
 
 function set(partial: Partial<SetEntry>): SetEntry {
   return {
     id: "s",
-    machineId: "m",
+    exerciseId: "m",
     muscleGroupId: "g",
     setNumber: 1,
     completed: true,
@@ -141,11 +141,11 @@ test('the spreadsheet\'s "Done" entries do not count', needsFixtures, () => {
   // logging from memory on the sofa, which is the app's whole reason to exist.
   const lateralRaise = historicalSessions
     .find((s) => s.id === "push-20260830")!
-    .sets.find((s) => s.machineId === "lateral-raise")!;
+    .sets.find((s) => s.exerciseId === "lateral-raise")!;
   assert.equal(lateralRaise.reps, null);
   assert.equal(isSetLogged(lateralRaise, "weightReps"), false);
 
-  // Shoulders survived anyway, on the other two machines.
+  // Shoulders survived anyway, on the other two exercises.
   const shoulders = outcomeFor("push-20260830").groups.find(
     (g) => g.muscleGroupId === "shoulders",
   );
@@ -168,7 +168,7 @@ test("skipped sets never count, whatever numbers they carry", () => {
   );
 });
 
-test("timed machines need a duration, not reps and weight", () => {
+test("timed exercises need a duration, not reps and weight", () => {
   assert.equal(isSetLogged(set({ durationSeconds: 1200 }), "duration"), true);
   assert.equal(isSetLogged(set({ reps: 10, weightKg: 60 }), "duration"), false);
 });
@@ -189,69 +189,69 @@ function session(sets: SetEntry[], requirements: Session["requirements"]): Sessi
   };
 }
 
-test("several sets on one machine count as one machine", () => {
+test("several sets on one exercise count as one exercise", () => {
   const s = session(
     [
       set({ id: "1", setNumber: 1, reps: 10, weightKg: 60 }),
       set({ id: "2", setNumber: 2, reps: 10, weightKg: 60 }),
       set({ id: "3", setNumber: 3, reps: 8, weightKg: 62.5 }),
     ],
-    [{ muscleGroupId: "g", requiredMachineCount: 2 }],
+    [{ muscleGroupId: "g", requiredExerciseCount: 2 }],
   );
-  const outcome = evaluateSession(s, { machines: [liftMachine] });
+  const outcome = evaluateSession(s, { exercises: [liftExercise] });
   assert.equal(outcome.groups[0]?.loggedCount, 1);
   assert.equal(outcome.successful, false);
 });
 
-test("the same machine logged for two groups counts once for each, not twice for either", () => {
-  // The Smith machine, used for chest and then for shoulders in one session.
-  const smith = machinesById.get("smith-machine")!;
+test("the same exercise logged for two groups counts once for each, not twice for either", () => {
+  // Hammer curl, logged for biceps and then for forearms in one session.
+  const hammerCurl = exercisesById.get("hammer-curl")!;
   const s = session(
     [
-      set({ id: "1", machineId: "smith-machine", muscleGroupId: "chest", reps: 10, weightKg: 50 }),
-      set({ id: "2", machineId: "smith-machine", muscleGroupId: "shoulders", reps: 10, weightKg: 40 }),
+      set({ id: "1", exerciseId: "hammer-curl", muscleGroupId: "biceps", reps: 10, weightKg: 50 }),
+      set({ id: "2", exerciseId: "hammer-curl", muscleGroupId: "forearms", reps: 10, weightKg: 40 }),
     ],
     [
-      { muscleGroupId: "chest", requiredMachineCount: 1 },
-      { muscleGroupId: "shoulders", requiredMachineCount: 1 },
-      { muscleGroupId: "triceps", requiredMachineCount: 1 },
+      { muscleGroupId: "biceps", requiredExerciseCount: 1 },
+      { muscleGroupId: "forearms", requiredExerciseCount: 1 },
+      { muscleGroupId: "back", requiredExerciseCount: 1 },
     ],
   );
-  const outcome = evaluateSession(s, { machines: [smith] });
+  const outcome = evaluateSession(s, { exercises: [hammerCurl] });
 
   assert.deepEqual(
-    outcome.groups.find((g) => g.muscleGroupId === "chest")?.machineIds,
-    ["smith-machine"],
+    outcome.groups.find((g) => g.muscleGroupId === "biceps")?.exerciseIds,
+    ["hammer-curl"],
   );
   assert.deepEqual(
-    outcome.groups.find((g) => g.muscleGroupId === "shoulders")?.machineIds,
-    ["smith-machine"],
+    outcome.groups.find((g) => g.muscleGroupId === "forearms")?.exerciseIds,
+    ["hammer-curl"],
   );
   // And it does nothing for a group it was not logged against.
   assert.equal(
-    outcome.groups.find((g) => g.muscleGroupId === "triceps")?.loggedCount,
+    outcome.groups.find((g) => g.muscleGroupId === "back")?.loggedCount,
     0,
   );
   assert.equal(outcome.successful, false);
 });
 
-test("chest requiring two machines is not met by one", () => {
+test("chest requiring two exercises is not met by one", () => {
   const outcome = evaluateMuscleGroup(
     session(
-      [set({ id: "1", machineId: "pec-fly", muscleGroupId: "chest", reps: 10, weightKg: 75 })],
+      [set({ id: "1", exerciseId: "pec-fly", muscleGroupId: "chest", reps: 10, weightKg: 75 })],
       [],
     ),
     "chest",
     2,
-    machinesById,
+    exercisesById,
   );
   assert.equal(outcome.loggedCount, 1);
   assert.equal(outcome.met, false);
 });
 
 test("a required count of zero makes a group optional and never blocking", () => {
-  const s = session([], [{ muscleGroupId: "forearms", requiredMachineCount: 0 }]);
-  const outcome = evaluateSession(s, { machines });
+  const s = session([], [{ muscleGroupId: "forearms", requiredExerciseCount: 0 }]);
+  const outcome = evaluateSession(s, { exercises });
   assert.equal(outcome.groups[0]?.optional, true);
   assert.equal(outcome.groups[0]?.met, true);
   assert.equal(outcome.successful, true);
@@ -261,13 +261,13 @@ test("a required count of zero makes a group optional and never blocking", () =>
 
 test("optional groups are excluded from the met/total score", () => {
   const s = session(
-    [set({ id: "1", machineId: "pec-fly", muscleGroupId: "chest", reps: 10, weightKg: 75 })],
+    [set({ id: "1", exerciseId: "pec-fly", muscleGroupId: "chest", reps: 10, weightKg: 75 })],
     [
-      { muscleGroupId: "chest", requiredMachineCount: 1 },
-      { muscleGroupId: "forearms", requiredMachineCount: 0 },
+      { muscleGroupId: "chest", requiredExerciseCount: 1 },
+      { muscleGroupId: "forearms", requiredExerciseCount: 0 },
     ],
   );
-  const outcome = evaluateSession(s, { machines });
+  const outcome = evaluateSession(s, { exercises });
   assert.equal(outcome.requiredGroupsMet, 1);
   assert.equal(outcome.requiredGroupsTotal, 1);
   assert.equal(outcome.successful, true);
@@ -288,12 +288,12 @@ test("outstanding groups drive the continue button", needsFixtures, () => {
   );
 });
 
-test("unknown machines are ignored rather than crashing", () => {
+test("unknown exercises are ignored rather than crashing", () => {
   const s = session(
-    [set({ id: "1", machineId: "does-not-exist", muscleGroupId: "chest", reps: 10, weightKg: 60 })],
-    [{ muscleGroupId: "chest", requiredMachineCount: 1 }],
+    [set({ id: "1", exerciseId: "does-not-exist", muscleGroupId: "chest", reps: 10, weightKg: 60 })],
+    [{ muscleGroupId: "chest", requiredExerciseCount: 1 }],
   );
-  assert.equal(evaluateSession(s, { machines }).successful, false);
+  assert.equal(evaluateSession(s, { exercises }).successful, false);
 });
 
 // ---------------------------------------------------------------------------
@@ -302,36 +302,53 @@ test("unknown machines are ignored rather than crashing", () => {
 
 test("requirements snapshot comes from the family, in order", () => {
   assert.deepEqual(requirementsForFamily("push", seedCatalogue), [
-    { muscleGroupId: "chest", requiredMachineCount: 1 },
-    { muscleGroupId: "shoulders", requiredMachineCount: 1 },
-    { muscleGroupId: "triceps", requiredMachineCount: 1 },
+    { muscleGroupId: "chest", requiredExerciseCount: 1 },
+    { muscleGroupId: "shoulders", requiredExerciseCount: 1 },
+    { muscleGroupId: "triceps", requiredExerciseCount: 1 },
   ]);
 });
 
-test("a machine's mapping puts it under several groups across families", () => {
-  const chest = machinesForMuscleGroup("chest", seedCatalogue).map((m) => m.machine.id);
-  const shoulders = machinesForMuscleGroup("shoulders", seedCatalogue).map((m) => m.machine.id);
-  const quads = machinesForMuscleGroup("quads", seedCatalogue).map((m) => m.machine.id);
+test("one exercise can serve two muscle groups", () => {
+  // The surviving many-to-many now that exercises are the grain. The Smith
+  // machine used to span three groups through three movements; those are three
+  // exercises today. Hammer curl is one movement worked for two groups.
+  const biceps = exercisesForMuscleGroup("biceps", seedCatalogue).map((e) => e.id);
+  const forearms = exercisesForMuscleGroup("forearms", seedCatalogue).map((e) => e.id);
 
-  assert.ok(chest.includes("smith-machine"));
-  assert.ok(shoulders.includes("smith-machine"));
-  assert.ok(quads.includes("smith-machine")); // legs — a different family
+  assert.ok(biceps.includes("hammer-curl"));
+  assert.ok(forearms.includes("hammer-curl"));
 });
 
-test("the machine list carries the variant label for the group", () => {
-  const forChest = machinesForMuscleGroup("chest", seedCatalogue)
-    .find((m) => m.machine.id === "smith-machine");
-  const forQuads = machinesForMuscleGroup("quads", seedCatalogue)
-    .find((m) => m.machine.id === "smith-machine");
-  assert.equal(forChest?.variant, "incline press");
-  assert.equal(forQuads?.variant, "squat");
+test("the spreadsheet's three cable columns are three exercises, not one", () => {
+  // The generated seed collapsed these into one "cable station" with variants.
+  // The source data never did, and neither do we.
+  const ids = seedCatalogue.exercises.map((e) => e.id);
+  assert.ok(ids.includes("tricep-pushdown"));
+  assert.ok(ids.includes("cable-pull-up"));
+  assert.ok(ids.includes("cable-forearm-curl"));
+  assert.ok(!ids.includes("cable-station"));
 });
 
-test("machinesLoggedForGroup ignores other groups' work", needsFixtures, () => {
+test("the model still allows an exercise to cross families", () => {
+  // No seed row exercises this today, but the capability is real and the
+  // completion rule depends on it, so it is pinned here rather than left to
+  // be rediscovered.
+  const catalogue = {
+    ...seedCatalogue,
+    exerciseMuscleGroups: [
+      { exerciseId: "hack-squat", muscleGroupId: "quads" },
+      { exerciseId: "hack-squat", muscleGroupId: "chest" },
+    ],
+  };
+  assert.ok(exercisesForMuscleGroup("quads", catalogue).some((e) => e.id === "hack-squat"));
+  assert.ok(exercisesForMuscleGroup("chest", catalogue).some((e) => e.id === "hack-squat"));
+});
+
+test("exercisesLoggedForGroup ignores other groups' work", needsFixtures, () => {
   const s = historicalSessions.find((s) => s.id === "pull-20260819")!;
-  const back = machinesLoggedForGroup(s, "back", machinesById);
+  const back = exercisesLoggedForGroup(s, "back", exercisesById);
   assert.ok(back.includes("cable-station")); // the cable pull-up
-  const forearms = machinesLoggedForGroup(s, "forearms", machinesById);
+  const forearms = exercisesLoggedForGroup(s, "forearms", exercisesById);
   // Same cable station, but the forearm curl was N/A, so it earns nothing here.
   assert.deepEqual(forearms, []);
 });
