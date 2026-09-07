@@ -7,6 +7,11 @@ import '@/global.css';
 
 import { Platform } from 'react-native';
 
+/**
+ * Both themes are defined from the start. Retrofitting colour is worse than
+ * doing it now, and every token below has a job in the app rather than being
+ * a palette for its own sake.
+ */
 export const Colors = {
   light: {
     text: '#000000',
@@ -14,6 +19,18 @@ export const Colors = {
     backgroundElement: '#F0F0F3',
     backgroundSelected: '#E0E1E6',
     textSecondary: '#60646C',
+    /** Hairlines between rows, and the edge of a card. */
+    border: '#D8D9DE',
+    /** Interactive things and the selected tab. */
+    accent: '#208AEF',
+    /** A muscle group that has met its required machine count. */
+    met: '#2E7D32',
+    /** A group still outstanding — informational, never alarming. */
+    outstanding: '#8A6D00',
+    /** An implausible value. Warns, never rejects. */
+    warning: '#B3261E',
+    /** An optional group: shown, trainable, never blocking. */
+    optional: '#60646C',
   },
   dark: {
     text: '#ffffff',
@@ -21,6 +38,12 @@ export const Colors = {
     backgroundElement: '#212225',
     backgroundSelected: '#2E3135',
     textSecondary: '#B0B4BA',
+    border: '#3A3D42',
+    accent: '#4DA3FF',
+    met: '#6FCF77',
+    outstanding: '#E0B341',
+    warning: '#FF6B60',
+    optional: '#B0B4BA',
   },
 } as const;
 
@@ -63,3 +86,11 @@ export const Spacing = {
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;
+
+/**
+ * Minimum size for anything tappable, in points.
+ *
+ * Everything that can be pressed must be at least this in both directions —
+ * sets are logged with sweaty hands, standing up, mid-session.
+ */
+export const MinTouchTarget = 44;
