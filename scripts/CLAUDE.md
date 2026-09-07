@@ -33,9 +33,12 @@ add inference, weighting, or "counts as half a set" logic.
 
 ### The completion rule
 
-1. A machine counts as logged for a group when at least one set against that
-   pairing records whatever that machine measures: **both reps and weight**, or
-   a duration, or a distance. Weight may be `0` (bodyweight sled). Reps may not.
+1. A machine counts as logged for a group when at least one **working** set
+   against that pairing records whatever that machine measures: **both reps and
+   weight**, or a duration, or a distance. Weight may be `0` — a bodyweight
+   machine is still a weighted machine (D14). Reps may not be 0.
+   **Warm-up sets never count** (D15): not for completion, not for personal
+   bests, not for volume.
 2. A muscle group succeeds when the number of **distinct machines** logged
    against it reaches its required count. Many sets on one machine count once.
    **A required count of 0 means optional** — shown, trainable, never blocking.
@@ -49,7 +52,7 @@ family's counts must never retrospectively fail a past session.
 
 ### The pairing
 
-History, "last time", targets, charts and personal bests are all keyed on
+History, "last time", charts and personal bests are all keyed on
 `(machineId, muscleGroupId)` — **never on the machine alone**. Smith machine for
 chest and Smith machine for shoulders are different histories with different
 weights. Showing the wrong one mid-set is worse than showing nothing.
@@ -120,7 +123,9 @@ were computed independently from the raw file before the code existed.
 These are unanswered and marked in `docs/decisions.md`. If a task needs one,
 stop and ask rather than inventing an answer:
 
-- **Q3** — what a "target" actually is. Blocks all target logic.
 - **Q27** — required machine count per group. Forearms currently ships as `0`.
-- **Q28** — which machines belong under Abs and Cardio. Both are empty.
-- **Q7** — hack squat logged at 0 kg: bodyweight, or sled not counted?
+- **Q28** — which machines belong under Abs and Cardio. Both are empty, and each
+  one named also needs its measure (D12).
+- **Q25, Q26, Q6** — the seed taxonomy is still a proposal, not confirmed.
+- **Q9** — which families fall on which days. The schedule shape is settled by
+  D13; the values are not.

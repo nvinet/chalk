@@ -52,7 +52,7 @@ retrospectively fails a past session.
 
 ### The pairing
 
-History, "last time", targets, charts and personal bests are all keyed on
+History, "last time", charts and personal bests are all keyed on
 `(machine, muscle group)` — never on the machine alone. Smith machine for chest
 and Smith machine for shoulders are different histories with different weights.
 
@@ -75,10 +75,11 @@ plus the planning material in `docs/`. The domain layer, database schema and
 session-logging screens described above are designed but not yet built.
 
 Several decisions are still open and are listed in `docs/decisions.md` — most
-significantly what a "target" is (Q3), the required machine count per group
-(Q27), and which machines belong under abs and cardio (Q28, both families
-currently empty). These block the corresponding features; they are questions to
-ask, not to guess at.
+significantly the required machine count per group (Q27), and which machines
+belong under abs and cardio (Q28, both families currently empty). These block
+the corresponding features; they are questions to ask, not to guess at.
+
+Targets are deliberately out of v1 (D16).
 
 ## Getting started
 
