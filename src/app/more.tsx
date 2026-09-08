@@ -6,7 +6,7 @@ import { HintRow } from '@/components/hint-row';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { useMigrationState } from '@/db';
+import { useCatalogueState, useMigrationState } from '@/db';
 import { checkDatabaseHealth, type DatabaseHealth } from '@/db/health';
 
 /**
@@ -26,18 +26,37 @@ function useDatabaseHint() {
   return <ThemedText type="small">SQLite {health.sqliteVersion}</ThemedText>;
 }
 
-function useMigrationHint() {
-  const state = useMigrationState();
-  if (state.status === 'running') return <ThemedText type="small">migrating…</ThemedText>;
-  if (state.status === 'failed') {
-    return <ThemedText type="small">failed — {state.error}</ThemedText>;
-  }
-  return <ThemedText type="small">up to date</ThemedText>;
+function useDatabaseHints() {
+  const migrations = useMigrationState();
+  const catalogue = useCatalogueState(migrations);
+
+  const migrationHint =
+    migrations.status === 'running' ? (
+      <ThemedText type="small">migrating…</ThemedText>
+    ) : migrations.status === 'failed' ? (
+      <ThemedText type="small">failed — {migrations.error}</ThemedText>
+    ) : (
+      <ThemedText type="small">up to date</ThemedText>
+    );
+
+  const catalogueHint =
+    catalogue.status === 'waiting' ? (
+      <ThemedText type="small">waiting…</ThemedText>
+    ) : catalogue.status === 'failed' ? (
+      <ThemedText type="small">failed — {catalogue.error}</ThemedText>
+    ) : (
+      <ThemedText type="small">
+        {catalogue.counts.exercises} exercises, {catalogue.counts.muscleGroups} groups,{' '}
+        {catalogue.counts.families} families
+      </ThemedText>
+    );
+
+  return { migrationHint, catalogueHint };
 }
 
 export default function MoreScreen() {
   const databaseHint = useDatabaseHint();
-  const migrationHint = useMigrationHint();
+  const { migrationHint, catalogueHint } = useDatabaseHints();
 
   return (
     <ThemedView style={styles.container}>
@@ -50,6 +69,7 @@ export default function MoreScreen() {
         <ThemedView type="backgroundElement" style={styles.card}>
           <HintRow title="Database" hint={databaseHint} />
           <HintRow title="Migrations" hint={migrationHint} />
+          <HintRow title="Catalogue" hint={catalogueHint} />
         </ThemedView>
 
         <ThemedText type="code" style={styles.heading}>
