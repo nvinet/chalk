@@ -120,6 +120,12 @@ export default function MuscleGroupScreen() {
               groupName={data.name}
               history={data.history}
               logged={loggedHere.has(exercise.id)}
+              onLog={() =>
+                router.push({
+                  pathname: '/session/[id]/[groupId]/[exerciseId]',
+                  params: { id, groupId, exerciseId: exercise.id },
+                })
+              }
             />
           ))}
 
@@ -157,12 +163,14 @@ function ExerciseCard({
   groupName,
   history,
   logged,
+  onLog,
 }: {
   exercise: Exercise;
   groupId: string;
   groupName: string;
   history: Session[];
   logged: boolean;
+  onLog: () => void;
 }) {
   const colors = useTheme();
 
@@ -170,7 +178,11 @@ function ExerciseCard({
   const last = lastTimeForPairing(history, { exerciseId: exercise.id, muscleGroupId: groupId }, exercise);
 
   return (
-    <View style={[styles.card, { borderColor: logged ? colors.met : colors.border }]}>
+    <Pressable
+      onPress={onLog}
+      accessibilityRole="button"
+      accessibilityLabel={`Log ${exercise.name}`}
+      style={[styles.card, { borderColor: logged ? colors.met : colors.border }]}>
       <View style={styles.cardBody}>
         <ThemedText type="smallBold">
           {logged ? '✓ ' : ''}
@@ -180,12 +192,10 @@ function ExerciseCard({
           {last ? `${last.date} · ${last.summary}` : `not used for ${groupName.toLowerCase()} yet`}
         </ThemedText>
       </View>
-      <View style={[styles.logButton, { borderColor: colors.border }]}>
-        <ThemedText type="small" themeColor="textSecondary">
-          Log · #22
-        </ThemedText>
+      <View style={[styles.logButton, { borderColor: colors.accent }]}>
+        <ThemedText type="smallBold">Log</ThemedText>
       </View>
-    </View>
+    </Pressable>
   );
 }
 

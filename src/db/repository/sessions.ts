@@ -10,7 +10,7 @@ import { and, asc, desc, eq } from 'drizzle-orm';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { useMemo } from 'react';
 
-import type { Id, IsoDate, Session } from '../../domain/types';
+import type { Id, IsoDate, Session, SetEntry } from '../../domain/types';
 import { db } from '../client';
 import { newId, today } from '../ids';
 import { toSession, toSetEntry } from '../mappers';
@@ -231,4 +231,76 @@ export function recentSessionsForMuscleGroup(
     const session = getSession(sessionId);
     return session ? [session] : [];
   });
+}
+
+/** What a set records, before it knows its number. */
+export interface SetInput {
+  reps?: number | null;
+  weightKg?: number | null;
+  durationSeconds?: number | null;
+  distanceM?: number | null;
+  warmup?: boolean;
+  note?: string | null;
+}
+
+/**
+ * Writes one set, immediately.
+ *
+ * Committed as it is entered, never batched at the end of a session (N7): a
+ * crash mid-session must lose nothing. There is no draft state to flush.
+ *
+ * The set number is derived from what is already logged for this exact pairing
+ * in this session, so the same exercise logged for two muscle groups keeps two
+ * independent numberings — which is what the unique index on
+ * (session, exercise, group, set_number) expects.
+ */
+export function logSet(
+  sessionId: Id,
+  exerciseId: Id,
+  muscleGroupId: Id,
+  input: SetInput,
+): SetEntry {
+  const existing = db
+    .select({ setNumber: setEntries.setNumber })
+    .from(setEntries)
+    .where(
+      and(
+        eq(setEntries.sessionId, sessionId),
+        eq(setEntries.exerciseId, exerciseId),
+        eq(setEntries.muscleGroupId, muscleGroupId),
+      ),
+    )
+    .all();
+
+  const setNumber = existing.reduce((max, r) => Math.max(max, r.setNumber), 0) + 1;
+  const id = newId('set');
+
+  db.insert(setEntries)
+    .values({
+      id,
+      sessionId,
+      exerciseId,
+      muscleGroupId,
+      setNumber,
+      reps: input.reps ?? null,
+      weightKg: input.weightKg ?? null,
+      durationSeconds: input.durationSeconds ?? null,
+      distanceM: input.distanceM ?? null,
+      warmup: input.warmup ?? false,
+      note: input.note ?? null,
+    })
+    .run();
+
+  const row = db.select().from(setEntries).where(eq(setEntries.id, id)).get();
+  if (!row) throw new Error('set vanished immediately after insert');
+  return toSetEntry(row);
+}
+
+/**
+ * Removes a set. Earlier numbers are left alone rather than renumbered —
+ * a gap is honest about what happened, and renumbering would rewrite history
+ * he did not ask to change.
+ */
+export function removeSet(id: Id): void {
+  db.delete(setEntries).where(eq(setEntries.id, id)).run();
 }
