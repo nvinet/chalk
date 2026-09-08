@@ -1,4 +1,5 @@
 import { useDrizzleStudio } from 'expo-drizzle-studio-plugin';
+import * as Notifications from 'expo-notifications';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StyleSheet, useColorScheme, View } from 'react-native';
@@ -12,6 +13,21 @@ import { expoDb, useCatalogueState, useMigrationState } from '@/db';
 import { useResumeInterruptedSession } from '@/db/resume';
 
 SplashScreen.preventAutoHideAsync();
+
+/**
+ * The rest notification is for the case where the phone is in a pocket. With
+ * the app in front, the countdown is already on screen and already buzzes, so
+ * a banner would be the same news a third time — iOS shows it normally once
+ * the app is backgrounded, which is the case it exists for (#27).
+ */
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldPlaySound: false,
+    shouldSetBadge: false,
+    shouldShowBanner: false,
+    shouldShowList: false,
+  }),
+});
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();

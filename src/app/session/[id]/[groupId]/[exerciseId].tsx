@@ -26,7 +26,9 @@ import {
   type MeasureValues,
 } from '@/domain/measures';
 import { checkMeasures, referenceValues } from '@/domain/plausibility';
+import { formatRemaining, isFinished, remainingSeconds, restProgress } from '@/domain/rest';
 import { lastTimeForPairing } from '@/domain/scoring';
+import { useRestTimer } from '@/hooks/use-rest-timer';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -73,6 +75,7 @@ export default function LogExerciseScreen() {
   // Dismissals are keyed by the value they were shown for, so correcting the
   // number brings the warning back and correcting it again does not.
   const [dismissed, setDismissed] = useState<string[]>([]);
+  const rest = useRestTimer({ exerciseId, muscleGroupId: groupId });
 
   if (!session || !exercise) {
     return (
@@ -135,6 +138,8 @@ export default function LogExerciseScreen() {
     logSet(session.id, exerciseId, groupId, toSetInput(exercise.tracking, values));
     // Keep the values: the next set usually repeats the last.
     setDraft(values);
+    // Rest begins when the set is logged, not when a button is pressed (#27).
+    rest.start(exercise.defaultRestSeconds, exercise.name);
   };
 
   return (
@@ -225,6 +230,18 @@ export default function LogExerciseScreen() {
             );
           })}
 
+          {rest.timer && (
+            <RestBar
+              remaining={remainingSeconds(rest.timer, rest.now)}
+              progress={restProgress(rest.timer, rest.now)}
+              done={isFinished(rest.timer, rest.now)}
+              onSkip={rest.skip}
+              onExtend={() => rest.extend(30, exercise.name)}
+            />
+          )}
+
+          {/* Always here, resting or not: logging is never blocked (N-rule).
+              A set finished early is a set logged early. */}
           <Pressable onPress={commit} accessibilityRole="button">
             <ThemedView style={[styles.logButton, { backgroundColor: colors.accent }]}>
               <ThemedText type="smallBold" style={styles.logLabel}>
@@ -249,6 +266,55 @@ export default function LogExerciseScreen() {
         </View>
       </SafeAreaView>
     </ThemedView>
+  );
+}
+
+/**
+ * The countdown, in the row above the Log button.
+ *
+ * Reads at arm's length from the bench and never takes the screen over: the
+ * steppers stay usable underneath it, so the whole thing can be ignored.
+ */
+function RestBar({
+  remaining,
+  progress,
+  done,
+  onSkip,
+  onExtend,
+}: {
+  remaining: number;
+  progress: number;
+  done: boolean;
+  onSkip: () => void;
+  onExtend: () => void;
+}) {
+  const colors = useTheme();
+  const tint = done ? colors.met : colors.accent;
+
+  return (
+    <View style={styles.rest}>
+      <View style={styles.restHead}>
+        <ThemedText type="code">{done ? 'rest is up' : 'resting'}</ThemedText>
+        <ThemedText type="smallBold" style={{ color: tint }}>
+          {formatRemaining(remaining)}
+        </ThemedText>
+      </View>
+
+      <View style={[styles.restTrack, { backgroundColor: colors.backgroundElement }]}>
+        <View
+          style={[styles.restFill, { backgroundColor: tint, width: `${progress * 100}%` }]}
+        />
+      </View>
+
+      <View style={styles.restActions}>
+        <Pressable onPress={onSkip} accessibilityRole="button" style={styles.restButton}>
+          <ThemedText type="link">{done ? 'clear' : 'skip'}</ThemedText>
+        </Pressable>
+        <Pressable onPress={onExtend} accessibilityRole="button" style={styles.restButton}>
+          <ThemedText type="link">+30s</ThemedText>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
@@ -334,6 +400,12 @@ const styles = StyleSheet.create({
   colValue: { flex: 1 },
   colAction: { minHeight: MinTouchTarget, minWidth: 72, justifyContent: 'center' },
   field: { gap: Spacing.two },
+  rest: { gap: Spacing.two },
+  restHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  restTrack: { height: 6, borderRadius: 3, overflow: 'hidden' },
+  restFill: { height: 6, borderRadius: 3 },
+  restActions: { flexDirection: 'row', justifyContent: 'space-between' },
+  restButton: { minHeight: MinTouchTarget, minWidth: 72, justifyContent: 'center' },
   warning: {
     flexDirection: 'row',
     alignItems: 'center',
