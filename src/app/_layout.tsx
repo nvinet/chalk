@@ -74,6 +74,9 @@ export default function RootLayout() {
           <Stack.Screen name="session/[id]" />
           {/* Catalogue editors, reached from More. */}
           <Stack.Screen name="catalogue/muscle-groups" />
+          <Stack.Screen name="catalogue/families" />
+          <Stack.Screen name="catalogue/exercises" />
+          <Stack.Screen name="catalogue/exercise/[id]" />
         </Stack>
       </View>
     </ThemeProvider>

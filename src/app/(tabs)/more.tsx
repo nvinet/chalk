@@ -11,7 +11,7 @@ import { appliedMigrationCount, catalogueCounts } from '@/db';
 import { checkDatabaseHealth } from '@/db/health';
 
 /**
- * Settings, taxonomy editors and export will live here (W12, #15-#17, #48).
+ * Settings, taxonomy editors and export live here (W12, #15-#17, #48).
  *
  * The session card that used to sit here is gone: starting and resuming a
  * session belongs on Today (#32), which is where it now is.
@@ -79,8 +79,12 @@ export default function MoreScreen() {
               hint={<ThemedText type="link">edit ›</ThemedText>}
             />
           </Pressable>
-          <HintRow title="Families" hint={<ThemedText type="small">#15</ThemedText>} />
-          <HintRow title="Exercises" hint={<ThemedText type="small">#16</ThemedText>} />
+          <Pressable onPress={() => router.push('/catalogue/families')} accessibilityRole="button">
+            <HintRow title="Families" hint={<ThemedText type="link">edit ›</ThemedText>} />
+          </Pressable>
+          <Pressable onPress={() => router.push('/catalogue/exercises')} accessibilityRole="button">
+            <HintRow title="Exercises" hint={<ThemedText type="link">edit ›</ThemedText>} />
+          </Pressable>
         </ThemedView>
 
         <ThemedText type="code" style={styles.heading}>

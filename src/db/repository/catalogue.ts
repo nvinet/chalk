@@ -258,3 +258,122 @@ export function useMuscleGroups(): MuscleGroup[] {
   const live = useLiveQuery(db.select().from(muscleGroups).orderBy(asc(muscleGroups.position)));
   return useMemo(() => (live.data ?? []).map(toMuscleGroup), [live.data]);
 }
+
+/* -------------------------------------------------- family composition (#15) */
+
+/**
+ * How many distinct exercises this group needs, in this family.
+ *
+ * Per group per family, so chest can ask for two on push day and something
+ * else elsewhere. Changing it never touches a session already logged:
+ * requirements are snapshotted when a session starts (#19), and nothing reads
+ * this table to score the past.
+ */
+export function setRequiredExerciseCount(
+  familyId: Id,
+  muscleGroupId: Id,
+  required: number,
+): void {
+  db.update(familyMuscleGroups)
+    .set({ requiredExerciseCount: Math.max(0, Math.round(required)) })
+    .where(
+      and(
+        eq(familyMuscleGroups.familyId, familyId),
+        eq(familyMuscleGroups.muscleGroupId, muscleGroupId),
+      ),
+    )
+    .run();
+}
+
+export function reorderFamilyMuscleGroups(familyId: Id, idsInOrder: Id[]): void {
+  db.transaction((tx) => {
+    idsInOrder.forEach((muscleGroupId, index) => {
+      tx.update(familyMuscleGroups)
+        .set({ position: index + 1 })
+        .where(
+          and(
+            eq(familyMuscleGroups.familyId, familyId),
+            eq(familyMuscleGroups.muscleGroupId, muscleGroupId),
+          ),
+        )
+        .run();
+    });
+  });
+}
+
+/* ------------------------------------------------------ exercises (#16) */
+
+/**
+ * A new exercise, attached to nothing.
+ *
+ * The muscle groups are chosen on the editor that opens straight after, and
+ * guessing one here would be worse than none: an exercise silently filed under
+ * chest is harder to notice than one the editor flags as attached to nothing.
+ */
+export function createExercise(name: string, muscleGroupId?: Id): Id {
+  const id = newId('exercise');
+  db.transaction((tx) => {
+    tx.insert(exercises).values({ id, name: name.trim(), aliases: [] }).run();
+    if (muscleGroupId) {
+      tx.insert(exerciseMuscleGroups).values({ exerciseId: id, muscleGroupId, position: 0 }).run();
+    }
+  });
+  return id;
+}
+
+export interface ExerciseFields {
+  name?: string;
+  tracking?: Exercise['tracking'];
+  weightIncrementKg?: number;
+  defaultRestSeconds?: number;
+  notes?: string | null;
+  aliases?: string[];
+}
+
+export function updateExercise(id: Id, fields: ExerciseFields): void {
+  db.update(exercises).set(fields).where(eq(exercises.id, id)).run();
+}
+
+export function setExerciseArchived(id: Id, archived: boolean): void {
+  db.update(exercises).set({ archived }).where(eq(exercises.id, id)).run();
+}
+
+/** Only when `isUsed` is false; the foreign keys refuse otherwise. */
+export function deleteExercise(id: Id): void {
+  db.transaction((tx) => {
+    tx.delete(exerciseMuscleGroups).where(eq(exerciseMuscleGroups.exerciseId, id)).run();
+    tx.delete(exercises).where(eq(exercises.id, id)).run();
+  });
+}
+
+/**
+ * Replaces which groups an exercise counts towards.
+ *
+ * The mapping says what is *possible*; it grants no credit on its own, so
+ * removing one never rewrites a set that already named that group (D4).
+ */
+export function setExerciseMuscleGroups(exerciseId: Id, muscleGroupIds: Id[]): void {
+  db.transaction((tx) => {
+    tx.delete(exerciseMuscleGroups).where(eq(exerciseMuscleGroups.exerciseId, exerciseId)).run();
+    if (muscleGroupIds.length === 0) return;
+    tx.insert(exerciseMuscleGroups)
+      .values(muscleGroupIds.map((muscleGroupId, i) => ({ exerciseId, muscleGroupId, position: i })))
+      .run();
+  });
+}
+
+/** The groups an exercise counts towards. */
+export function muscleGroupsForExercise(exerciseId: Id): Id[] {
+  return db
+    .select({ id: exerciseMuscleGroups.muscleGroupId })
+    .from(exerciseMuscleGroups)
+    .where(eq(exerciseMuscleGroups.exerciseId, exerciseId))
+    .all()
+    .map((r) => r.id);
+}
+
+/** Every exercise, live, for the library list. */
+export function useExercises(): Exercise[] {
+  const live = useLiveQuery(db.select().from(exercises).orderBy(asc(exercises.name)));
+  return useMemo(() => (live.data ?? []).map(toExercise), [live.data]);
+}
