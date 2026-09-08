@@ -188,3 +188,35 @@ export function useSession(id: Id): Session | null {
   if (!shell) return null;
   return toSession(shell.row, shell.requirements, (live.data ?? []).map(toSetEntry));
 }
+
+/**
+ * Recent sessions containing work for a muscle group, most recent first.
+ *
+ * Feeds "last time" on W3. Deliberately scoped to the group rather than to a
+ * single exercise: the screen asks about every exercise mapped to the group, so
+ * one query beats one per row.
+ *
+ * `exclude` keeps the session in progress out of its own history — "last time"
+ * means before today, not what was logged five minutes ago.
+ */
+export function recentSessionsForMuscleGroup(
+  muscleGroupId: Id,
+  exclude?: Id,
+  limit = 20,
+): Session[] {
+  const ids = db
+    .selectDistinct({ sessionId: setEntries.sessionId, date: sessions.date })
+    .from(setEntries)
+    .innerJoin(sessions, eq(sessions.id, setEntries.sessionId))
+    .where(eq(setEntries.muscleGroupId, muscleGroupId))
+    .orderBy(desc(sessions.date))
+    .limit(limit)
+    .all()
+    .map((r) => r.sessionId)
+    .filter((sessionId) => sessionId !== exclude);
+
+  return ids.flatMap((sessionId) => {
+    const session = getSession(sessionId);
+    return session ? [session] : [];
+  });
+}

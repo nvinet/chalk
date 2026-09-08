@@ -120,6 +120,7 @@ export default function SessionScreen() {
               session={session}
               exercisesById={exercisesById}
               highlighted={group.muscleGroupId === next?.muscleGroupId}
+              onPress={() => openGroup(session.id, group.muscleGroupId)}
             />
           ))}
 
@@ -136,6 +137,7 @@ export default function SessionScreen() {
                   session={session}
                   exercisesById={exercisesById}
                   highlighted={false}
+                  onPress={() => openGroup(session.id, group.muscleGroupId)}
                 />
               ))}
             </>
@@ -143,18 +145,26 @@ export default function SessionScreen() {
         </ScrollView>
 
         {next && (
-          <ThemedView type="backgroundElement" style={styles.cta}>
-            <ThemedText type="smallBold">
-              Continue › {groupNames.get(next.muscleGroupId) ?? next.muscleGroupId}
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              choosing an exercise arrives with #21
-            </ThemedText>
-          </ThemedView>
+          <Pressable
+            onPress={() => openGroup(session.id, next.muscleGroupId)}
+            accessibilityRole="button">
+            <ThemedView type="backgroundElement" style={styles.cta}>
+              <ThemedText type="smallBold">
+                Continue › {groupNames.get(next.muscleGroupId) ?? next.muscleGroupId}
+              </ThemedText>
+            </ThemedView>
+          </Pressable>
         )}
       </SafeAreaView>
     </ThemedView>
   );
+}
+
+function openGroup(sessionId: string, groupId: string) {
+  router.push({
+    pathname: '/session/[id]/[groupId]',
+    params: { id: sessionId, groupId },
+  });
 }
 
 function GroupRow({
@@ -163,24 +173,35 @@ function GroupRow({
   session,
   exercisesById,
   highlighted,
+  onPress,
 }: {
   group: MuscleGroupOutcome;
   name: string;
   session: Session;
   exercisesById: ReadonlyMap<Id, Exercise>;
   highlighted: boolean;
+  onPress: () => void;
 }) {
   const colors = useTheme();
 
   return (
-    <View
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${name}`}
       style={[
         styles.group,
         { borderColor: colors.border },
         highlighted && { borderColor: colors.accent, borderWidth: 2 },
       ]}>
       <View style={styles.groupHead}>
-        <ThemedText type="smallBold">{group.met && !group.optional ? '✓ ' : ''}{name}</ThemedText>
+        <ThemedText type="smallBold">
+          {group.met && !group.optional ? '✓ ' : ''}
+          {name}
+          <ThemedText type="small" themeColor="textSecondary">
+            {'  ›'}
+          </ThemedText>
+        </ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
           {group.optional
             ? '0 required — never blocks the session'
@@ -213,7 +234,7 @@ function GroupRow({
           nothing logged yet
         </ThemedText>
       )}
-    </View>
+    </Pressable>
   );
 }
 
