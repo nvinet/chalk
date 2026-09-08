@@ -25,6 +25,7 @@ import {
   trimDecimal,
   type MeasureValues,
 } from '@/domain/measures';
+import { checkMeasures, referenceValues } from '@/domain/plausibility';
 import { lastTimeForPairing } from '@/domain/scoring';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -69,6 +70,9 @@ export default function LogExerciseScreen() {
     : null;
 
   const [draft, setDraft] = useState<MeasureValues | null>(null);
+  // Dismissals are keyed by the value they were shown for, so correcting the
+  // number brings the warning back and correcting it again does not.
+  const [dismissed, setDismissed] = useState<string[]>([]);
 
   if (!session || !exercise) {
     return (
@@ -86,6 +90,14 @@ export default function LogExerciseScreen() {
   const nextSetNumber = sets.reduce((max, s) => Math.max(max, s.setNumber), 0) + 1;
 
   const fields = fieldsForTracking(exercise.tracking, exercise.weightIncrementKg);
+
+  // Compared against his own recent best for this pairing — the last session
+  // that used it, plus whatever this one has logged already (#26).
+  const warnings = checkMeasures(
+    exercise.tracking,
+    values,
+    referenceValues([...(last?.sets ?? []), ...sets]),
+  );
   const outcome = evaluateSession(session, { exercises: context.allExercises });
   const group = outcome.groups.find((g) => g.muscleGroupId === groupId);
 
@@ -183,16 +195,35 @@ export default function LogExerciseScreen() {
             </View>
           )}
 
-          {fields.map((field) => (
-            <Stepper
-              key={field.key}
-              label={field.label}
-              value={values[field.key]}
-              step={field.step}
-              decimals={field.decimals}
-              onChange={(next) => setDraft({ ...values, [field.key]: Math.max(0, next) })}
-            />
-          ))}
+          {fields.map((field) => {
+            const warning = warnings.find((w) => w.key === field.key);
+            const token = `${field.key}:${values[field.key]}`;
+            return (
+              <View key={field.key} style={styles.field}>
+                <Stepper
+                  label={field.label}
+                  value={values[field.key]}
+                  step={field.step}
+                  decimals={field.decimals}
+                  onChange={(next) => setDraft({ ...values, [field.key]: Math.max(0, next) })}
+                />
+                {warning && !dismissed.includes(token) && (
+                  <Pressable
+                    onPress={() => setDismissed([...dismissed, token])}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Dismiss: ${warning.message}`}
+                    style={[styles.warning, { borderColor: colors.warning }]}>
+                    <ThemedText type="small" style={[styles.warningText, { color: colors.warning }]}>
+                      {warning.message}
+                    </ThemedText>
+                    <ThemedText type="small" style={{ color: colors.warning }}>
+                      ×
+                    </ThemedText>
+                  </Pressable>
+                )}
+              </View>
+            );
+          })}
 
           <Pressable onPress={commit} accessibilityRole="button">
             <ThemedView style={[styles.logButton, { backgroundColor: colors.accent }]}>
@@ -302,6 +333,17 @@ const styles = StyleSheet.create({
   colSet: { width: 48 },
   colValue: { flex: 1 },
   colAction: { minHeight: MinTouchTarget, minWidth: 72, justifyContent: 'center' },
+  field: { gap: Spacing.two },
+  warning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    minHeight: MinTouchTarget,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Spacing.three,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  warningText: { flex: 1 },
   stepper: { gap: Spacing.two },
   stepperRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   stepButton: {
