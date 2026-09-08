@@ -88,20 +88,25 @@ npm start         # expo start
 `npm test` runs on the TypeScript source via Node's built-in runner. It must
 stay dependency-free — do not add vitest or jest.
 
-## Tests are the specification
+## Tests
 
-`src/__tests__/completion.test.ts` scores **the eleven sessions actually logged
-in the spreadsheet** and asserts the exact outcome for each. Those expectations
-were computed independently from the raw file before the code existed.
+`npm test` runs 60 tests on synthetic sessions — the completion rule, warm-up
+exclusion, the three tracking types, the pairing, the mappers, and seed
+integrity. All of them run; none are skipped.
 
-**If a change makes those tests fail, the change is wrong** unless a decision in
-`docs/decisions.md` has changed too. Five of eleven pass. The important cases:
+**The eleven historical sessions are gone** (D18). They were once described here
+as the specification, scored from the spreadsheet with expectations computed
+independently of the code. That stopped being true twice over: the spreadsheet
+is no longer the taxonomy source, and D17 invalidated the expectations anyway —
+`legs-20260831` flips now that hack squat is the only whole-leg exercise.
 
-- `pull-20260829` — four back exercises, no curls. Biceps must read **zero**.
-- `push-20260830` — lateral raises recorded as `"Done"` with no numbers. Must
-  **not** count.
-- `legs-20260831` — hack squat recorded `"No"`; quads still met via the quad
-  extension.
+So there is no oracle outside the code any more. Treat the rule tests as the
+closest thing: if a change makes them fail, be sure a decision in
+`docs/decisions.md` changed too.
+
+The seed integrity tests are worth keeping green for a duller reason — they
+catch the likeliest seed bug, a typo in an id, before it becomes a foreign key
+failure on first launch.
 
 ## Conventions
 
@@ -128,9 +133,13 @@ were computed independently from the raw file before the code existed.
 These are unanswered and marked in `docs/decisions.md`. If a task needs one,
 stop and ask rather than inventing an answer:
 
-- **Q27** — required exercise count per group. Forearms currently ships as `0`.
-- **Q28** — which exercises belong under Abs and Cardio. Both are empty, and each
-  one named also needs its measure (D12).
-- **Q25, Q26, Q6** — the seed taxonomy is still a proposal, not confirmed.
+- **Q27** — the required exercise count per group per family. Everything ships
+  as `1`, which means a successful legs session needs all five of its groups.
 - **Q9** — which families fall on which days. The schedule shape is settled by
   D13; the values are not.
+- **Q30** — whether abs deserves a quick-log path rather than a full session.
+- **Q20** — rest by feel or by the clock, and how long.
+- **Q11** — body weight and measurements, deliberately out of v1.
+
+The taxonomy is no longer among them: the agreed catalogue settled Q25, Q26 and
+Q28, and made Q6 moot (D18).

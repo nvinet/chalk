@@ -1,18 +1,20 @@
 /**
  * Chalk — seed catalogue.
  *
- * One exercise per column of the original spreadsheet. That is deliberate: the
- * source data was already exercise-grained — "SM incline bench press" is one
- * column, and the cable station appears as three ("cable pull up", "cable
- * forearm curl", "trycept pushdown"). D7 makes the spreadsheet the source of
- * the taxonomy, so the taxonomy matches it.
+ * The agreed catalogue from #2, not the spreadsheet. The spreadsheet was the
+ * original source of the taxonomy (D7) but stopped earning that place: two of
+ * its columns cannot be resolved without archaeology, and this catalogue is
+ * finer-grained than anything it can supply. Historical data may be retrofitted
+ * later, or not at all (D18).
  *
- * Equipment is not modelled. It lives in the name, as it did in the
- * spreadsheet.
+ * One exercise per row of that table. Equipment is not modelled — it lives in
+ * the name (D17).
  *
- * Still a proposal, expected to be corrected before M1 is signed off (Q25,
- * Q26, Q27): rear delt row's group, whether hips should be two groups, and
- * what belongs under abs and cardio (Q28).
+ * Aliases carry the old spreadsheet spellings so search still finds them
+ * (#17), even though no spreadsheet data is imported.
+ *
+ * Every required count is 1 for now. Q27 (#4) tailors them later; note that a
+ * successful legs session therefore needs all five of its groups.
  */
 
 import type { Catalogue } from "../domain/types.ts";
@@ -25,7 +27,8 @@ export const seedCatalogue: Catalogue = {
     { id: "push", name: "Push", position: 1, usesMuscleGroups: true },
     { id: "pull", name: "Pull", position: 2, usesMuscleGroups: true },
     { id: "legs", name: "Legs", position: 3, usesMuscleGroups: true },
-    { id: "abs", name: "Abs", position: 4, usesMuscleGroups: false },
+    // Abs now has real muscle groups, unlike cardio (D18, superseding D1).
+    { id: "abs", name: "Abs", position: 4, usesMuscleGroups: true },
     { id: "cardio", name: "Cardio", position: 5, usesMuscleGroups: false },
   ],
 
@@ -33,17 +36,21 @@ export const seedCatalogue: Catalogue = {
     { id: "chest", name: "Chest", position: 1 },
     { id: "shoulders", name: "Shoulders", position: 2 },
     { id: "triceps", name: "Triceps", position: 3 },
-    { id: "back", name: "Back", position: 4 },
-    { id: "biceps", name: "Biceps", position: 5 },
-    { id: "forearms", name: "Forearms", position: 6 },
-    { id: "quads", name: "Quads", position: 7 },
-    { id: "hamstrings", name: "Hamstrings", position: 8 },
-    { id: "calves", name: "Calves", position: 9 },
-    { id: "hips", name: "Hips", position: 10 },
-    // Families without muscle groups still need one, so that a single
-    // completion rule covers everything. Never shown in the UI.
-    { id: "abs-all", name: "Abs", position: 11, implicit: true },
-    { id: "cardio-all", name: "Cardio", position: 12, implicit: true },
+    { id: "lats", name: "Lats", position: 4 },
+    { id: "mid-back", name: "Mid-back", position: 5 },
+    { id: "biceps", name: "Biceps", position: 6 },
+    { id: "forearms", name: "Forearms", position: 7 },
+    { id: "quads", name: "Quads", position: 8 },
+    { id: "hamstrings", name: "Hamstrings", position: 9 },
+    { id: "calves", name: "Calves", position: 10 },
+    { id: "glutes", name: "Glutes", position: 11 },
+    { id: "whole-leg", name: "Whole leg", position: 12 },
+    { id: "lower-abs", name: "Lower abs", position: 13 },
+    { id: "upper-abs", name: "Upper abs", position: 14 },
+    { id: "obliques", name: "Obliques", position: 15 },
+    // Cardio has no muscle groups, so it carries one implicit group and a
+    // single completion rule still covers every family. Never shown in the UI.
+    { id: "cardio-all", name: "Cardio", position: 16, implicit: true },
   ],
 
   familyMuscleGroups: [
@@ -51,51 +58,70 @@ export const seedCatalogue: Catalogue = {
     { familyId: "push", muscleGroupId: "shoulders", position: 2, requiredExerciseCount: 1 },
     { familyId: "push", muscleGroupId: "triceps", position: 3, requiredExerciseCount: 1 },
 
-    { familyId: "pull", muscleGroupId: "back", position: 1, requiredExerciseCount: 1 },
-    { familyId: "pull", muscleGroupId: "biceps", position: 2, requiredExerciseCount: 1 },
-    // Forearms failed all three historical pull sessions on a count of 1 —
-    // it has one exercise and was skipped both times it appeared (§3.4).
-    // Shipped optional; he can raise it once he decides (Q27).
-    { familyId: "pull", muscleGroupId: "forearms", position: 3, requiredExerciseCount: 0 },
+    { familyId: "pull", muscleGroupId: "lats", position: 1, requiredExerciseCount: 1 },
+    { familyId: "pull", muscleGroupId: "mid-back", position: 2, requiredExerciseCount: 1 },
+    { familyId: "pull", muscleGroupId: "biceps", position: 3, requiredExerciseCount: 1 },
+    { familyId: "pull", muscleGroupId: "forearms", position: 4, requiredExerciseCount: 1 },
 
     { familyId: "legs", muscleGroupId: "quads", position: 1, requiredExerciseCount: 1 },
     { familyId: "legs", muscleGroupId: "hamstrings", position: 2, requiredExerciseCount: 1 },
     { familyId: "legs", muscleGroupId: "calves", position: 3, requiredExerciseCount: 1 },
-    { familyId: "legs", muscleGroupId: "hips", position: 4, requiredExerciseCount: 1 },
+    { familyId: "legs", muscleGroupId: "glutes", position: 4, requiredExerciseCount: 1 },
+    { familyId: "legs", muscleGroupId: "whole-leg", position: 5, requiredExerciseCount: 1 },
 
-    { familyId: "abs", muscleGroupId: "abs-all", position: 1, requiredExerciseCount: 1 },
+    { familyId: "abs", muscleGroupId: "lower-abs", position: 1, requiredExerciseCount: 1 },
+    { familyId: "abs", muscleGroupId: "upper-abs", position: 2, requiredExerciseCount: 1 },
+    { familyId: "abs", muscleGroupId: "obliques", position: 3, requiredExerciseCount: 1 },
+
     { familyId: "cardio", muscleGroupId: "cardio-all", position: 1, requiredExerciseCount: 1 },
   ],
 
   exercises: [
     // Push
     lift("pec-fly", "Pec fly", ["peck fly"]),
-    lift("sm-incline-bench-press", "SM incline bench press", ["SM incline bench press"]),
+    lift("sm-incline-bench-press", "Smith machine incline bench press", ["SM incline bench press"]),
     lift("bench-press-flat", "Bench press (flat)", []),
-    lift("lateral-raise", "Lateral raise", ["lateral rases"], 1),
+    lift("lateral-raise", "Lateral raises", ["lateral rases"], 1),
     lift("shoulder-press", "Shoulder press", []),
-    lift("rear-delt-row", "Rear delt row", [], 1),
+    lift("rear-delt-fly", "Rear delt fly", ["rear delt row"], 1),
     lift("tricep-pushdown", "Tricep pushdown", ["trycept pushdown"]),
     lift("tricep-overhead-extension", "Tricep overhead extension", ["trycept overhead extension"], 1),
+    lift("single-arm-tricep-pushdown", "Single arm tricep pushdown", [], 1),
 
     // Pull
     lift("lat-pulldown", "Lat pulldown", ["lat pull down"]),
     lift("cable-pull-up", "Cable pull-up", ["cable pull up"]),
-    lift("seated-row-horizontal", "Seated row (horizontal)", []),
     lift("seated-row-vertical", "Seated row (vertical)", []),
-    lift("t-bar-row", "T-bar row", []),
+    lift("seated-row-horizontal", "Seated row (horizontal)", []),
     lift("machine-preacher-curl", "Machine preacher curl", [], 1),
-    lift("incline-bench-curl", "Incline bench bicep curl", ["incline bench bycept curl"], 1),
+    lift("incline-bench-curl", "Incline bench biceps curl", ["incline bench bycept curl"], 1),
+    lift("reverse-curl", "Reverse curl", [], 1),
     lift("hammer-curl", "Hammer curl", [], 1),
-    lift("cable-forearm-curl", "Cable forearm curl", ["cable forearm curl"], 1),
+    lift("cable-forearm-curl", "Cable forearm curl", [], 1),
 
     // Legs
-    lift("hack-squat", "Hack squat", ["hax squat"]),
     lift("quad-extension", "Quad extension", ["quad extention"]),
+    lift("hip-adduction", "Hip adductor", []),
     lift("hamstring-curl", "Hamstring curl", []),
-    lift("calf-raise", "Calf raise", ["calve rases"]),
-    lift("hip-abduction", "Hip abduction", ["hip abductor"]),
-    lift("hip-adduction", "Hip adduction", ["hip adductor"]),
+    lift("calf-raise", "Calf raises", ["calve rases"]),
+    lift("hip-abduction", "Hip abductor", []),
+    lift("hip-thrust", "Hip thrust", []),
+    lift("hack-squat", "Hack squat", ["hax squat"]),
+    lift("leg-press", "Leg press", []),
+    lift("squat", "Squat", []),
+
+    // Abs
+    lift("decline-sit-up", "Decline sit-up", [], 1),
+    lift("cable-crunch", "Cable crunch", [], 1),
+    lift("cable-woodchop", "Cable woodchops", [], 1),
+
+    // Cardio — one measure each, fixed per exercise (D12)
+    distance("swimming", "Swimming"),
+    distance("running", "Running"),
+    distance("cycling", "Cycling"),
+    timed("rowing", "Rowing"),
+    timed("hiit", "HIIT"),
+    timed("stair-climber", "Stair climber"),
   ],
 
   exerciseMuscleGroups: [
@@ -105,33 +131,49 @@ export const seedCatalogue: Catalogue = {
     { exerciseId: "bench-press-flat", muscleGroupId: "chest" },
     { exerciseId: "lateral-raise", muscleGroupId: "shoulders" },
     { exerciseId: "shoulder-press", muscleGroupId: "shoulders" },
-    { exerciseId: "rear-delt-row", muscleGroupId: "shoulders" },
+    { exerciseId: "rear-delt-fly", muscleGroupId: "shoulders" },
     { exerciseId: "tricep-pushdown", muscleGroupId: "triceps" },
     { exerciseId: "tricep-overhead-extension", muscleGroupId: "triceps" },
+    { exerciseId: "single-arm-tricep-pushdown", muscleGroupId: "triceps" },
 
     // Pull
-    { exerciseId: "lat-pulldown", muscleGroupId: "back" },
-    { exerciseId: "cable-pull-up", muscleGroupId: "back" },
-    { exerciseId: "seated-row-horizontal", muscleGroupId: "back" },
-    { exerciseId: "seated-row-vertical", muscleGroupId: "back" },
-    { exerciseId: "t-bar-row", muscleGroupId: "back" },
+    { exerciseId: "lat-pulldown", muscleGroupId: "lats" },
+    { exerciseId: "cable-pull-up", muscleGroupId: "lats" },
+    { exerciseId: "seated-row-vertical", muscleGroupId: "lats" },
+    { exerciseId: "seated-row-horizontal", muscleGroupId: "mid-back" },
     { exerciseId: "machine-preacher-curl", muscleGroupId: "biceps" },
     { exerciseId: "incline-bench-curl", muscleGroupId: "biceps" },
-    // The surviving many-to-many: one movement, two groups. Logging it for
-    // biceps does nothing for forearms — the set says which (D4).
-    { exerciseId: "hammer-curl", muscleGroupId: "biceps" },
+    { exerciseId: "reverse-curl", muscleGroupId: "biceps" },
     { exerciseId: "hammer-curl", muscleGroupId: "forearms" },
     { exerciseId: "cable-forearm-curl", muscleGroupId: "forearms" },
 
     // Legs
-    { exerciseId: "hack-squat", muscleGroupId: "quads" },
     { exerciseId: "quad-extension", muscleGroupId: "quads" },
+    { exerciseId: "hip-adduction", muscleGroupId: "quads" },
     { exerciseId: "hamstring-curl", muscleGroupId: "hamstrings" },
     { exerciseId: "calf-raise", muscleGroupId: "calves" },
-    { exerciseId: "hip-abduction", muscleGroupId: "hips" },
-    { exerciseId: "hip-adduction", muscleGroupId: "hips" },
+    { exerciseId: "hip-abduction", muscleGroupId: "glutes" },
+    { exerciseId: "hip-thrust", muscleGroupId: "glutes" },
+    { exerciseId: "hack-squat", muscleGroupId: "whole-leg" },
+    { exerciseId: "leg-press", muscleGroupId: "whole-leg" },
+    { exerciseId: "squat", muscleGroupId: "whole-leg" },
 
-    // Abs and cardio have no exercises yet — Q28.
+    // Abs
+    { exerciseId: "decline-sit-up", muscleGroupId: "lower-abs" },
+    { exerciseId: "cable-crunch", muscleGroupId: "upper-abs" },
+    { exerciseId: "cable-woodchop", muscleGroupId: "obliques" },
+
+    // Cardio — all under the implicit group
+    { exerciseId: "swimming", muscleGroupId: "cardio-all" },
+    { exerciseId: "running", muscleGroupId: "cardio-all" },
+    { exerciseId: "cycling", muscleGroupId: "cardio-all" },
+    { exerciseId: "rowing", muscleGroupId: "cardio-all" },
+    { exerciseId: "hiit", muscleGroupId: "cardio-all" },
+    { exerciseId: "stair-climber", muscleGroupId: "cardio-all" },
+
+    // No exercise currently serves more than one muscle group. The model
+    // supports it and the completion rule depends on it, so it is pinned by a
+    // test rather than left to rot (Q26, #3).
   ],
 };
 
@@ -151,13 +193,25 @@ function lift(
   };
 }
 
-/** For when Q28 is answered: cardio exercises record time, not weight. */
-export function timedExercise(id: string, name: string) {
+/** Rowing, HIIT, stair climber — recorded in seconds (D12). */
+function timed(id: string, name: string) {
   return {
     id,
     name,
     aliases: [] as string[],
     tracking: "duration" as const,
+    weightIncrementKg: 0,
+    defaultRestSeconds: 0,
+  };
+}
+
+/** Swimming, running, cycling — recorded in metres, displayed as km (D12). */
+function distance(id: string, name: string) {
+  return {
+    id,
+    name,
+    aliases: [] as string[],
+    tracking: "distance" as const,
     weightIncrementKg: 0,
     defaultRestSeconds: 0,
   };

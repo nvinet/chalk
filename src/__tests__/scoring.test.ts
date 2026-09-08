@@ -19,7 +19,6 @@ import {
 } from "../domain/scoring.ts";
 import { indexById } from "../domain/completion.ts";
 import { seedCatalogue } from "../db/seed.ts";
-import { historicalSessions, needsFixtures } from "./fixtures.generated.ts";
 import type { Exercise, Session, SetEntry } from "../domain/types.ts";
 
 const exercises = seedCatalogue.exercises;
@@ -76,17 +75,6 @@ test("volume by muscle group attributes each set to the group it was logged for"
   assert.equal(byGroup.get("forearms")?.volumeKg, 400);
   // One exercise, two groups, no double counting anywhere.
   assert.equal(byGroup.get("biceps")?.sets, 1);
-});
-
-test("a real session's volume matches the sets that were properly recorded", needsFixtures, () => {
-  // 18 August push: all eight exercises logged with numbers.
-  const s = historicalSessions.find((x) => x.id === "push-20260818")!;
-  const expected = s.sets.reduce(
-    (t, e) => t + (e.reps ?? 0) * (e.weightKg ?? 0),
-    0,
-  );
-  assert.equal(sessionVolumeKg(s, { exercises }), expected);
-  assert.ok(expected > 0);
 });
 
 // ---------------------------------------------------------------------------
@@ -266,4 +254,16 @@ test("weights print without trailing noise", () => {
   assert.equal(formatKg(73), "73 kg");
   assert.equal(formatKg(47.3), "47.3 kg");
   assert.equal(formatKg(31.75), "31.8 kg");
+});
+
+test("sessionVolumeKg totals every logged set in the session", () => {
+  const s = session("vol", "2026-09-08", [
+    set({ exerciseId: "pec-fly", muscleGroupId: "chest", reps: 10, weightKg: 40 }),
+    set({ exerciseId: "pec-fly", muscleGroupId: "chest", setNumber: 2, reps: 8, weightKg: 45 }),
+    // Warm-ups and unrecorded sets contribute nothing (D15).
+    set({ exerciseId: "pec-fly", muscleGroupId: "chest", setNumber: 3, reps: 12, weightKg: 20, warmup: true }),
+    set({ exerciseId: "pec-fly", muscleGroupId: "chest", setNumber: 4, reps: null, weightKg: 50 }),
+  ]);
+
+  assert.equal(sessionVolumeKg(s, { exercises }), 10 * 40 + 8 * 45);
 });

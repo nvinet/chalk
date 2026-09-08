@@ -21,8 +21,12 @@ Three levels: **family → muscle group → exercise.**
 - An **exercise** sits under one or more muscle groups, possibly across
   families. Hammer curl is biceps and forearms — one movement, two groups.
 
-Exercises, not machines. Equipment is not modelled: the original spreadsheet
-called a column "SM incline bench press", and so does the catalogue.
+Exercises, not machines. Equipment is not modelled — it lives in the name, the
+way "Smith machine incline bench press" does.
+
+The catalogue is 36 exercises across 15 muscle groups. It came from the
+spreadsheet originally but no longer answers to it (D18): the spreadsheet is
+the app's history, not its source.
 
 Abs and cardio have no muscle groups; internally they carry a single implicit
 group so one completion rule covers every family.

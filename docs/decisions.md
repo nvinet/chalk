@@ -15,6 +15,12 @@ machine), which is the limitation that prompted the app. Abs and cardio have no
 muscle groups and go family → machine directly; internally they carry one
 implicit group so a single completion rule covers everything.
 
+**Renamed by D17** — the third level is an *exercise*, not a machine.
+
+**Abs claim superseded by D18.** Abs now has three real muscle groups: lower
+abs, upper abs and obliques. Only cardio keeps an implicit group. The mechanism
+survives untouched, and is why adding real groups to abs cost nothing.
+
 ### D2 — A session is composed of muscle groups, not machines
 The session screen lists muscle groups. Machines are chosen inside a group, at
 the moment of training. This is the answer to the commonest complaint about
@@ -61,6 +67,11 @@ The spreadsheet's single number per exercise is gone. Sets are individual rows.
 Starting clean. Eleven sessions of one-number-per-exercise data would not be
 comparable with anything logged afterwards. The spreadsheet remains the source
 of the exercise library and taxonomy only.
+
+**Taxonomy claim superseded by D18.** The spreadsheet is no longer the source
+of the taxonomy — the agreed catalogue is. The claim that matters here, that
+its *session data* is not imported, survives and is now stronger: nothing at
+all comes from the spreadsheet.
 
 ### D8 — Cardio records time, not weight
 Tracking type lives on the machine (`weightReps` | `duration`), so cardio needs
@@ -233,6 +244,45 @@ Smith machine as a squat, and the flat bench as a close-grip triceps press. At
 exercise grain those are separate exercises that never appear in the data; Q25
 and Q26 decide whether to add them.
 
+### D18 — The agreed catalogue is the taxonomy; historical data is not retrofitted
+Agreed 8 Sep 2026 (issue #57, answering Q25/#2 and Q28/#5). The catalogue agreed
+on #2 replaces the spreadsheet as the source of the taxonomy: **36 exercises,
+15 muscle groups plus cardio's implicit one, across 5 families.**
+
+**Why the spreadsheet lost the job.** Two of its columns could not be resolved
+without archaeology — `T-bar row` had no agreed muscle group, and the legs sheet
+holds a seventh exercise with logged numbers and no name (Q6; confirmed by
+inspection, headers run B-L while data runs B-O). Meanwhile the agreed catalogue
+is finer-grained than anything the spreadsheet can supply: it splits back into
+lats and mid-back, adds glutes, whole leg and three abs groups, and names six
+cardio exercises the spreadsheet never had.
+
+**Historical data may be retrofitted later, or never.** The aim is to unblock
+seeding, persistence and the UI. This is a deliberate trade: momentum over
+continuity with eleven sessions that D7 already refused to import.
+
+**Consequence — the eleven fixture tests are deleted**, along with the fixtures
+stub. They can never run without the spreadsheet, and their expectations had
+already been invalidated by D17: `legs-20260831` flips from pass to fail now
+that hack squat is the only whole-leg exercise, which reverses D3's finding that
+"a missed hack squat no longer sinks the session".
+
+`CLAUDE.md` called those tests *the specification*. That claim is removed rather
+than left standing, since a false claim about what guards the code is worse than
+no claim. The rules stay covered by 60 tests on synthetic sessions, plus new
+seed integrity checks — referential integrity, no orphaned exercises, no
+stranded groups, cardio measured only by time or distance.
+
+**Q27 (#4) is not answered.** Every required count ships as 1. Note this makes a
+successful legs session need all five of its groups, which is stricter than
+anything in the historical record.
+
+**Q6 (#7) becomes moot** — the unnamed exercise only mattered for mapping
+historical cells.
+
+**`T-bar row` is not in the catalogue.** It can be added later; note that
+mid-back currently has exactly one exercise.
+
 ---
 
 ## Open — ask, do not guess
@@ -240,10 +290,6 @@ and Q26 decide whether to add them.
 | | Question | Blocks |
 |---|---|---|
 | **Q27** | Required machine count for each group in each family. Default is 1; forearms currently 0. | Seed values; the meaning of a successful session |
-| **Q25** | Are the seed muscle group assignments right? Specifically rear delt row under shoulders, and whether hips should split into abduction and adduction. | Seed catalogue |
-| **Q26** | Which *exercises* serve several muscle groups? Hammer curl is biceps and forearms; are there others? Reframed by D17 — much smaller than when this modelled machines. | Seed catalogue |
-| **Q28** | What machines belong under Abs and Cardio? Both families are currently empty. | Abs and cardio being usable at all |
-| **Q6** | The legs sheet's unnamed seventh exercise (30 reps @ 27.5 kg, then 10 @ 25 kg). What is it? | One machine missing from the library |
 | **Q9** | Which families fall on which days, and how often. The schedule *shape* is settled by D13; these are the values it needs. | Seeding the weekly plan |
 | **Q30** | Is a full session too much ceremony for abs, which used to be one tick? | Whether a quick-log path is built |
 | **Q11** | Body weight / measurements — wanted at all? | Deliberately out of v1 |
