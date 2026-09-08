@@ -9,6 +9,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { expoDb, useCatalogueState, useMigrationState } from '@/db';
+import { useResumeInterruptedSession } from '@/db/resume';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -28,6 +29,10 @@ export default function RootLayout() {
    */
   const migrations = useMigrationState();
   const catalogue = useCatalogueState(migrations);
+
+  // A session that was force-quit is still in progress, and its sets are
+  // already on disk — so reopening it is a navigation, not a recovery (#23).
+  useResumeInterruptedSession(catalogue.status === 'ready');
 
   const theme = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
 
