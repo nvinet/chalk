@@ -140,9 +140,10 @@ stop and ask rather than inventing an answer:
 
 - **Q27** — the required exercise count per group per family. Everything ships
   as `1`, which means a successful legs session needs all five of its groups.
-- **Q20** — rest by feel or by the clock, and how long.
 - **Q11** — body weight and measurements, deliberately out of v1.
 
 The taxonomy is settled (D18), and so is the plan: the schedule is defined by
 hand and nothing is seeded (D19), and abs uses the normal session flow rather
-than a quick-log path (D20).
+than a quick-log path (D20). Rest is settled too (D22): by the clock, started
+by logging a set, shown inline above the Log button, 90 seconds until an
+exercise proves otherwise.

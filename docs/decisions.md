@@ -343,6 +343,39 @@ would be a worse answer.
 first real exercise of the migration path — worth having happened before
 anything ships.
 
+### D22 — Rest is by the clock, inline, and 90 seconds until proven otherwise
+Agreed 8 Sep 2026 (answering Q20, implemented in #27). Three questions were
+tangled together in Q20; they come apart cleanly.
+
+**By the clock, and it starts itself.** Rest begins the moment a set is logged,
+not when a button is pressed. Nothing to remember and nothing to tap — which is
+the only version that survives contact with a gym.
+
+**Inline, not a headline.** The countdown is a row above the Log button on the
+logging screen: a bar, the remaining time, `skip` and `+30s`. It was a genuine
+choice against a full-screen takeover, which reads better across a gym but costs
+a tap to get back to logging and so works against N4. It is a thing that can be
+ignored, not a thing that must be dismissed.
+
+**The Log button stays enabled throughout.** Logging is never blocked, resting
+included: a set finished early is a set logged early.
+
+**90 seconds everywhere.** The length lives on the exercise
+(`defaultRestSeconds`) and is editable per exercise on the exercise editor, so
+the number is tuned one at a time as an exercise proves it wrong. Guessing
+thirty-six values now would be inventing data, and a wrong default that is easy
+to change beats a plausible one that looks authoritative.
+
+**On iOS the mechanism is a scheduled local notification**, not a background
+timer — an app is not allowed to count while backgrounded, and does not need
+to. A rest is stored as an *end time* rather than a decrementing counter, so
+the remaining time is recomputed from the wall clock and a locked phone, a
+backgrounded app or a throttled timer costs a stale pixel and never a wrong
+number.
+
+**Permission is asked the first time a rest starts**, not on launch, and a
+refusal costs only the notification. The on-screen countdown is the feature.
+
 ---
 
 ## Open — ask, do not guess
@@ -351,7 +384,6 @@ anything ships.
 |---|---|---|
 | **Q27** | Required machine count for each group in each family. Default is 1; forearms currently 0. | Seed values; the meaning of a successful session |
 | **Q11** | Body weight / measurements — wanted at all? | Deliberately out of v1 |
-| **Q20** | Rest by feel or by the clock, and how long? | Whether the rest timer is a headline feature |
 
 ---
 
