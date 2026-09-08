@@ -283,6 +283,34 @@ historical cells.
 **`T-bar row` is not in the catalogue.** It can be added later; note that
 mid-back currently has exactly one exercise.
 
+### D19 — The schedule and session content are defined by hand
+Agreed 8 Sep 2026 (issue #9, closing Q9). The weekly schedule is set up in the
+app, not seeded and not generated. `weekly_schedule` therefore ships **empty**,
+and the first run has no plan until he makes one.
+
+This answers the half of Q9 that D13 left open. D13 settled the shape — a
+configurable schedule that alternates families, which is why
+`families.times_per_week` was the wrong column. The values were still
+outstanding; the answer is that there are none to seed.
+
+**An assistant that proposes schedules is explicitly out of scope.** Worth
+revisiting only once there is enough logged history for a proposal to be based
+on something.
+
+**Consequence for #33:** the weekly plan screen needs a way to *define* the
+schedule, not merely display progress against a seeded one. That is the first
+thing it must do, or there is nothing to show adherence against.
+
+### D20 — Abs uses the normal session flow; there is no quick-log path
+Agreed 8 Sep 2026 (issue #53, closing Q30). Q30 asked whether a full session was
+too much ceremony for abs, which used to be one tick on the spreadsheet. It is
+not: D18 gave abs three real muscle groups — lower abs, upper abs and obliques —
+so an abs day is a session like any other and earns the same treatment.
+
+**Consequence for #34:** its entire premise was Q30. Abs no longer wants a quick
+path, and cardio was only ever carried along with it, so the issue should be
+closed unless cardio makes the case on its own.
+
 ---
 
 ## Open — ask, do not guess
@@ -290,8 +318,6 @@ mid-back currently has exactly one exercise.
 | | Question | Blocks |
 |---|---|---|
 | **Q27** | Required machine count for each group in each family. Default is 1; forearms currently 0. | Seed values; the meaning of a successful session |
-| **Q9** | Which families fall on which days, and how often. The schedule *shape* is settled by D13; these are the values it needs. | Seeding the weekly plan |
-| **Q30** | Is a full session too much ceremony for abs, which used to be one tick? | Whether a quick-log path is built |
 | **Q11** | Body weight / measurements — wanted at all? | Deliberately out of v1 |
 | **Q20** | Rest by feel or by the clock, and how long? | Whether the rest timer is a headline feature |
 

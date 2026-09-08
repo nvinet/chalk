@@ -135,11 +135,9 @@ stop and ask rather than inventing an answer:
 
 - **Q27** — the required exercise count per group per family. Everything ships
   as `1`, which means a successful legs session needs all five of its groups.
-- **Q9** — which families fall on which days. The schedule shape is settled by
-  D13; the values are not.
-- **Q30** — whether abs deserves a quick-log path rather than a full session.
 - **Q20** — rest by feel or by the clock, and how long.
 - **Q11** — body weight and measurements, deliberately out of v1.
 
-The taxonomy is no longer among them: the agreed catalogue settled Q25, Q26 and
-Q28, and made Q6 moot (D18).
+The taxonomy is settled (D18), and so is the plan: the schedule is defined by
+hand and nothing is seeded (D19), and abs uses the normal session flow rather
+than a quick-log path (D20).
