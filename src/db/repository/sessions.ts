@@ -7,6 +7,8 @@
  */
 
 import { and, asc, desc, eq } from 'drizzle-orm';
+import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
+import { useMemo } from 'react';
 
 import type { Id, IsoDate, Session } from '../../domain/types';
 import { db } from '../client';
@@ -124,4 +126,65 @@ export function activeSession(): Session | null {
     .get();
 
   return row ? getSession(row.id) : null;
+}
+
+/** Marks a session finished. Finishing is always allowed, however little was logged. */
+export function finishSession(id: Id): Session | null {
+  db.update(sessions)
+    .set({ status: 'finished', finishedAt: new Date().toISOString() })
+    .where(eq(sessions.id, id))
+    .run();
+  return getSession(id);
+}
+
+/** Abandons a session — closed without claiming it happened. */
+export function abandonSession(id: Id): void {
+  db.update(sessions)
+    .set({ status: 'abandoned', finishedAt: new Date().toISOString() })
+    .where(eq(sessions.id, id))
+    .run();
+}
+
+/**
+ * A session whose sets stay live while its shell is read once.
+ *
+ * The split mirrors the data. Requirements are snapshotted at start and are
+ * immutable by design (#19), and the session row does not change while it is
+ * being logged — so both are read once. Sets change constantly, so they come
+ * from `useLiveQuery`, which is what `enableChangeListener: true` in
+ * `client.ts` was enabled for back in #10: SQLite fires an update hook, the
+ * query re-runs, and the screen re-renders.
+ *
+ * Without this a session screen reads once and goes stale the moment a set is
+ * logged — which is exactly the thing it exists to show.
+ */
+export function useSession(id: Id): Session | null {
+  const live = useLiveQuery(
+    db
+      .select()
+      .from(setEntries)
+      .where(eq(setEntries.sessionId, id))
+      .orderBy(asc(setEntries.createdAt)),
+  );
+
+  const shell = useMemo(() => {
+    const row = db.select().from(sessions).where(eq(sessions.id, id)).get();
+    if (!row) return null;
+
+    const requirements = db
+      .select()
+      .from(sessionRequirements)
+      .where(eq(sessionRequirements.sessionId, id))
+      .orderBy(asc(sessionRequirements.position))
+      .all()
+      .map((r) => ({
+        muscleGroupId: r.muscleGroupId,
+        requiredExerciseCount: r.requiredExerciseCount,
+      }));
+
+    return { row, requirements };
+  }, [id]);
+
+  if (!shell) return null;
+  return toSession(shell.row, shell.requirements, (live.data ?? []).map(toSetEntry));
 }

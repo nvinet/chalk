@@ -97,3 +97,13 @@ export function exerciseById(id: Id): Exercise | null {
   const row = db.select().from(exercises).where(eq(exercises.id, id)).get();
   return row ? toExercise(row) : null;
 }
+
+/** Every exercise, archived included — scoring a past session needs them all. */
+export function listExercises(): Exercise[] {
+  return db.select().from(exercises).all().map(toExercise);
+}
+
+/** Every muscle group, for looking up names by id. */
+export function listMuscleGroups(): MuscleGroup[] {
+  return db.select().from(muscleGroups).all().map(toMuscleGroup);
+}

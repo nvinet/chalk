@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -85,8 +85,10 @@ function useSessionScaffold() {
 
   const start = (familyId: string) => {
     try {
-      setSession(startSession(familyId));
+      const started = startSession(familyId);
+      setSession(started);
       setError(null);
+      router.push({ pathname: '/session/[id]', params: { id: started.id } });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     }
@@ -130,6 +132,14 @@ export default function MoreScreen() {
               </ThemedText>
             }
           />
+          {session && (
+            <Pressable
+              onPress={() => router.push({ pathname: '/session/[id]', params: { id: session.id } })}
+              style={styles.button}
+              accessibilityRole="button">
+              <ThemedText type="small">open session</ThemedText>
+            </Pressable>
+          )}
           <ThemedView style={styles.buttonRow}>
             {['push', 'pull', 'legs'].map((familyId) => (
               <Pressable
