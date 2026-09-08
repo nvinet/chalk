@@ -70,6 +70,11 @@ is ever rebuilt natively, and the part testable without a simulator.
 
 > If it decides something, it goes in `domain/`. If it draws something, it does not.
 
+- **The database is made ready in `src/app/_layout.tsx`, above every screen.**
+  Migrations and the catalogue seed run there and nothing renders until they
+  are done. Never migrate or seed from a screen: it used to happen in the More
+  tab and only worked because the tabs mount eagerly, which is an accident
+  rather than a guarantee. Screens read; the root prepares.
 - Weight is stored canonically in **kilograms**, converted only for display.
 - Every set is written to SQLite **as it is entered**, never batched at the end.
   A crash mid-session must lose nothing.

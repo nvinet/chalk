@@ -12,8 +12,13 @@ import {
   MinTouchTarget,
   Spacing,
 } from '@/constants/theme';
-import { useCatalogueState, useMigrationState } from '@/db';
-import { abandonSession, activeSession, startSession } from '@/db/repository';
+import { appliedMigrationCount, catalogueCounts } from '@/db';
+import {
+  abandonSession,
+  activeSession,
+  startSession,
+  useHasSessionInProgress,
+} from '@/db/repository';
 import { checkDatabaseHealth, type DatabaseHealth } from '@/db/health';
 
 /**
@@ -33,32 +38,30 @@ function useDatabaseHint() {
   return <ThemedText type="small">SQLite {health.sqliteVersion}</ThemedText>;
 }
 
+/**
+ * Reads, never runs. The root layout applies migrations and seeds the
+ * catalogue before any screen mounts, so by the time this renders both are
+ * done — and calling the hooks again here would migrate twice.
+ */
 function useDatabaseHints() {
-  const migrations = useMigrationState();
-  const catalogue = useCatalogueState(migrations);
+  const [counts] = useState(() => ({
+    migrations: appliedMigrationCount(),
+    catalogue: catalogueCounts(),
+  }));
 
-  const migrationHint =
-    migrations.status === 'running' ? (
-      <ThemedText type="small">migrating…</ThemedText>
-    ) : migrations.status === 'failed' ? (
-      <ThemedText type="small">failed — {migrations.error}</ThemedText>
-    ) : (
-      <ThemedText type="small">up to date</ThemedText>
-    );
-
-  const catalogueHint =
-    catalogue.status === 'waiting' ? (
-      <ThemedText type="small">waiting…</ThemedText>
-    ) : catalogue.status === 'failed' ? (
-      <ThemedText type="small">failed — {catalogue.error}</ThemedText>
-    ) : (
+  return {
+    migrationHint: (
       <ThemedText type="small">
-        {catalogue.counts.exercises} exercises, {catalogue.counts.muscleGroups} groups,{' '}
-        {catalogue.counts.families} families
+        {counts.migrations} applied
       </ThemedText>
-    );
-
-  return { migrationHint, catalogueHint };
+    ),
+    catalogueHint: (
+      <ThemedText type="small">
+        {counts.catalogue.exercises} exercises, {counts.catalogue.muscleGroups} groups,{' '}
+        {counts.catalogue.families} families
+      </ThemedText>
+    ),
+  };
 }
 
 /**
@@ -108,6 +111,8 @@ export default function MoreScreen() {
   const databaseHint = useDatabaseHint();
   const { migrationHint, catalogueHint } = useDatabaseHints();
   const { session, error, start, abandon } = useSessionScaffold();
+  // Live, so it flips the moment a session is finished or abandoned (#29).
+  const awake = useHasSessionInProgress();
 
   return (
     <ThemedView style={styles.container}>
@@ -121,6 +126,14 @@ export default function MoreScreen() {
           <HintRow title="Database" hint={databaseHint} />
           <HintRow title="Migrations" hint={migrationHint} />
           <HintRow title="Catalogue" hint={catalogueHint} />
+          <HintRow
+            title="Screen"
+            hint={
+              <ThemedText type="small">
+                {awake ? 'kept awake — session open' : 'normal'}
+              </ThemedText>
+            }
+          />
         </ThemedView>
 
         <ThemedText type="code" style={styles.heading}>

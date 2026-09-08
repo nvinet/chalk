@@ -304,3 +304,17 @@ export function logSet(
 export function removeSet(id: Id): void {
   db.delete(setEntries).where(eq(setEntries.id, id)).run();
 }
+
+/**
+ * Whether a session is open, kept live.
+ *
+ * Drives the screen lock (#29). It watches the sessions table rather than
+ * taking a snapshot, so finishing or abandoning releases the lock without the
+ * screen that did it having to say so.
+ */
+export function useHasSessionInProgress(): boolean {
+  const live = useLiveQuery(
+    db.select({ id: sessions.id }).from(sessions).where(eq(sessions.status, 'inProgress')),
+  );
+  return (live.data?.length ?? 0) > 0;
+}

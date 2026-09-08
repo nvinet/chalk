@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import { useMemo } from 'react';
 
@@ -57,4 +58,17 @@ export function useCatalogueState(migrations: MigrationState): CatalogueState {
       };
     }
   }, [migrations.status]);
+}
+
+/**
+ * How many migrations have been applied. A read, not a run.
+ *
+ * The root layout owns running them (#29); anything else that wants to report
+ * on migrations should ask, not re-run, or drizzle would migrate twice.
+ */
+export function appliedMigrationCount(): number {
+  const row = db.get<{ n: number }>(
+    sql`select count(*) as n from __drizzle_migrations`,
+  );
+  return row?.n ?? 0;
 }

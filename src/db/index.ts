@@ -1,5 +1,7 @@
 export { db, expoDb, DATABASE_NAME } from './client';
+export { applyCatalogueSeed, catalogueCounts, type CatalogueCounts } from './seed-runner';
 export {
+  appliedMigrationCount,
   useCatalogueState,
   useMigrationState,
   type CatalogueState,
