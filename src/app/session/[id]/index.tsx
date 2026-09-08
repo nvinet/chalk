@@ -66,7 +66,13 @@ export default function SessionScreen() {
   const { exercisesById, groupNames } = catalogue;
   const outcome = evaluateSession(session, catalogue);
 
-  const leave = () => router.dismissTo('/');
+  /**
+   * Both endings land on the summary, replacing this screen rather than
+   * stacking on it — going back into a session that is over would be a lie
+   * about what can still be logged (#28).
+   */
+  const showSummary = () =>
+    router.replace({ pathname: '/session/[id]/summary', params: { id: session.id } });
 
   /**
    * Finishing is always allowed (W2), so an incomplete session warns rather
@@ -77,7 +83,7 @@ export default function SessionScreen() {
     const outstanding = outcome.requiredGroupsTotal - outcome.requiredGroupsMet;
     if (outstanding === 0) {
       finishSession(session.id);
-      leave();
+      showSummary();
       return;
     }
 
@@ -90,7 +96,7 @@ export default function SessionScreen() {
           text: 'Finish',
           onPress: () => {
             finishSession(session.id);
-            leave();
+            showSummary();
           },
         },
       ],
@@ -112,7 +118,7 @@ export default function SessionScreen() {
           style: 'destructive',
           onPress: () => {
             abandonSession(session.id);
-            leave();
+            showSummary();
           },
         },
       ],

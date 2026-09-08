@@ -428,3 +428,35 @@ export function skipExercise(
     skipReason: reason,
   });
 }
+
+/** Notes are saved as they are typed, like everything else (N7). */
+export function setSessionNotes(id: Id, notes: string): void {
+  db.update(sessions)
+    .set({ notes: notes.trim() === '' ? null : notes })
+    .where(eq(sessions.id, id))
+    .run();
+}
+
+/**
+ * Sessions before this one, for judging what is a personal best.
+ *
+ * Only finished sessions count as history — an abandoned one did not happen,
+ * and letting it set a record would make the record a lie.
+ */
+export function sessionsBefore(id: Id, limit = 200): Session[] {
+  const session = getSession(id);
+  if (!session) return [];
+
+  return db
+    .select({ id: sessions.id })
+    .from(sessions)
+    .where(eq(sessions.status, 'finished'))
+    .orderBy(desc(sessions.date))
+    .limit(limit)
+    .all()
+    .filter((row) => row.id !== id)
+    .flatMap((row) => {
+      const earlier = getSession(row.id);
+      return earlier && earlier.date <= session.date ? [earlier] : [];
+    });
+}
