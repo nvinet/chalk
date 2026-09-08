@@ -10,6 +10,7 @@
  * Irreplaceable, unlike the catalogue: re-seeding cannot bring a session back.
  */
 
+import { eq, sql } from "drizzle-orm";
 import { index, integer, real, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import { families, exercises, muscleGroups } from "./catalogue.ts";
@@ -30,7 +31,21 @@ export const sessions = sqliteTable(
     status: text("status").notNull().default("inProgress"),
     notes: text("notes"),
   },
-  (t) => [index("sessions_date_idx").on(t.date), index("sessions_family_idx").on(t.familyId)],
+  (t) => [
+    index("sessions_date_idx").on(t.date),
+    index("sessions_family_idx").on(t.familyId),
+    /**
+     * At most one session in progress (#58).
+     *
+     * A partial unique index rather than a check at the call site: everything
+     * downstream assumes a single open session — activeSession() returns one,
+     * and #23 resumes "the" interrupted one — so a second makes both
+     * meaningless. Enforced here, the next screen cannot forget.
+     */
+    uniqueIndex("sessions_one_in_progress_idx")
+      .on(t.status)
+      .where(eq(t.status, sql`'inProgress'`)),
+  ],
 );
 
 /**

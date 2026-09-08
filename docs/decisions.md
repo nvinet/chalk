@@ -311,6 +311,38 @@ so an abs day is a session like any other and earns the same treatment.
 path, and cardio was only ever carried along with it, so the issue should be
 closed unless cardio makes the case on its own.
 
+### D21 — At most one session in progress
+Agreed 8 Sep 2026 (issue #58). Everything downstream assumes it:
+`activeSession()` returns a single session, and #23 resumes "the" interrupted
+one. Two open sessions make both meaningless.
+
+Found the hard way while testing #21 — two were open at once, and W3 rendered a
+chest group against a legs session: blank subtitle, back button reading "Back to
+Legs". The screen was correct for the data it was handed; the data should not
+have existed.
+
+**Enforced in the database, not only at the call site.** A partial unique index,
+`unique(status) where status = 'inProgress'`, makes a second one impossible
+rather than merely discouraged. That matches how this schema already treats
+invariants — the foreign keys from `set_entries` restrict so history cannot be
+orphaned, rather than trusting callers to check. An invariant enforced only at
+the call site is broken by the next screen that forgets.
+
+`startSession` also checks first and throws a readable message naming the open
+session, because a constraint violation explains nothing and this is the normal
+path.
+
+Finished and abandoned sessions are unaffected — the index is partial, so there
+may be any number of those.
+
+**Consequence:** the UI offers *resume* rather than *start* while a session is
+open, with abandoning as the way out. An error where a sensible action belongs
+would be a worse answer.
+
+**This was the first migration after the initial schema** (`0001`), and so the
+first real exercise of the migration path — worth having happened before
+anything ships.
+
 ---
 
 ## Open — ask, do not guess

@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `sessions_one_in_progress_idx` ON `sessions` (`status`) WHERE "sessions"."status" = 'inProgress';

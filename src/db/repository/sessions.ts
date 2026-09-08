@@ -33,8 +33,20 @@ import {
  *
  * Implicit groups are copied too. Cardio is scored through one, and hiding it
  * is the UI's job, not the scorer's.
+ *
+ * Throws if a session is already in progress (#58). A partial unique index
+ * enforces that too, so a caller that forgets this check still cannot create a
+ * second one — but a constraint violation explains nothing, and this is the
+ * normal path.
  */
 export function startSession(familyId: Id, date: IsoDate = today()): Session {
+  const open = activeSession();
+  if (open) {
+    throw new Error(
+      `a ${open.familyId} session from ${open.date} is still in progress — finish or abandon it first`,
+    );
+  }
+
   const id = newId('session');
 
   return db.transaction((tx) => {

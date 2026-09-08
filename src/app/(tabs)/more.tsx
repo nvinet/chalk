@@ -13,7 +13,7 @@ import {
   Spacing,
 } from '@/constants/theme';
 import { useCatalogueState, useMigrationState } from '@/db';
-import { activeSession, startSession } from '@/db/repository';
+import { abandonSession, activeSession, startSession } from '@/db/repository';
 import { checkDatabaseHealth, type DatabaseHealth } from '@/db/health';
 
 /**
@@ -94,13 +94,20 @@ function useSessionScaffold() {
     }
   };
 
-  return { session, error, start };
+  const abandon = () => {
+    if (!session) return;
+    abandonSession(session.id);
+    setSession(null);
+    setError(null);
+  };
+
+  return { session, error, start, abandon };
 }
 
 export default function MoreScreen() {
   const databaseHint = useDatabaseHint();
   const { migrationHint, catalogueHint } = useDatabaseHints();
-  const { session, error, start } = useSessionScaffold();
+  const { session, error, start, abandon } = useSessionScaffold();
 
   return (
     <ThemedView style={styles.container}>
@@ -132,25 +139,32 @@ export default function MoreScreen() {
               </ThemedText>
             }
           />
-          {session && (
-            <Pressable
-              onPress={() => router.push({ pathname: '/session/[id]', params: { id: session.id } })}
-              style={styles.button}
-              accessibilityRole="button">
-              <ThemedText type="small">open session</ThemedText>
-            </Pressable>
-          )}
-          <ThemedView style={styles.buttonRow}>
-            {['push', 'pull', 'legs'].map((familyId) => (
+          {session ? (
+            // One session at a time (#58): resume it, or let it go.
+            <ThemedView style={styles.buttonRow}>
               <Pressable
-                key={familyId}
-                onPress={() => start(familyId)}
+                onPress={() => router.push({ pathname: '/session/[id]', params: { id: session.id } })}
                 style={styles.button}
                 accessibilityRole="button">
-                <ThemedText type="small">start {familyId}</ThemedText>
+                <ThemedText type="small">resume</ThemedText>
               </Pressable>
-            ))}
-          </ThemedView>
+              <Pressable onPress={abandon} style={styles.button} accessibilityRole="button">
+                <ThemedText type="small">abandon</ThemedText>
+              </Pressable>
+            </ThemedView>
+          ) : (
+            <ThemedView style={styles.buttonRow}>
+              {['push', 'pull', 'legs'].map((familyId) => (
+                <Pressable
+                  key={familyId}
+                  onPress={() => start(familyId)}
+                  style={styles.button}
+                  accessibilityRole="button">
+                  <ThemedText type="small">start {familyId}</ThemedText>
+                </Pressable>
+              ))}
+            </ThemedView>
+          )}
         </ThemedView>
 
         <ThemedText type="code" style={styles.heading}>
