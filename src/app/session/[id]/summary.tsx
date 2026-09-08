@@ -186,7 +186,10 @@ export default function SummaryScreen() {
         </ScrollView>
 
         <Pressable
-          onPress={() => router.dismissTo('/')}
+          // back(), not dismissTo: finishing arrives here having replaced the
+          // session screen, so back lands on the tabs; opening it from History
+          // returns to History rather than jumping to Today.
+          onPress={() => router.back()}
           accessibilityRole="button"
           style={styles.doneWrap}>
           <ThemedView style={[styles.done, { backgroundColor: colors.accent }]}>
