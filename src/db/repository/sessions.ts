@@ -318,3 +318,50 @@ export function useHasSessionInProgress(): boolean {
   );
   return (live.data?.length ?? 0) > 0;
 }
+
+/**
+ * Recent sessions, newest first, whatever their status.
+ *
+ * Today derives everything from these — the suggestion, the week, the last
+ * session — so it is one query rather than several, and the domain does the
+ * arithmetic.
+ */
+export function recentSessions(limit = 60): Session[] {
+  return db
+    .select({ id: sessions.id })
+    .from(sessions)
+    .orderBy(desc(sessions.date), desc(sessions.startedAt))
+    .limit(limit)
+    .all()
+    .flatMap((row) => {
+      const session = getSession(row.id);
+      return session ? [session] : [];
+    });
+}
+
+/**
+ * Recent sessions, kept live.
+ *
+ * Today derives the suggestion, the week and the last session from these, so it
+ * must react when one is started or finished. Watching the sessions table is
+ * the honest dependency — a boolean "is training" flag would work as a signal
+ * but would read as an accident to anyone maintaining it.
+ */
+export function useRecentSessions(limit = 60): Session[] {
+  const live = useLiveQuery(
+    db
+      .select({ id: sessions.id })
+      .from(sessions)
+      .orderBy(desc(sessions.date), desc(sessions.startedAt))
+      .limit(limit),
+  );
+
+  return useMemo(
+    () =>
+      (live.data ?? []).flatMap((row) => {
+        const session = getSession(row.id);
+        return session ? [session] : [];
+      }),
+    [live.data],
+  );
+}
