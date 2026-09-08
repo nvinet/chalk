@@ -1,12 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, MinTouchTarget, Spacing } from '@/constants/theme';
 import {
+  abandonSession,
   finishSession,
   listExercises,
   listMuscleGroups,
@@ -61,6 +62,59 @@ export default function SessionScreen() {
 
   const { exercisesById, groupNames } = catalogue;
   const outcome = evaluateSession(session, catalogue);
+
+  const leave = () => router.dismissTo('/');
+
+  /**
+   * Finishing is always allowed (W2), so an incomplete session warns rather
+   * than blocks. A session with everything met finishes straight away — there
+   * is nothing to warn about, and a prompt would just be a tap in the way.
+   */
+  const finish = () => {
+    const outstanding = outcome.requiredGroupsTotal - outcome.requiredGroupsMet;
+    if (outstanding === 0) {
+      finishSession(session.id);
+      leave();
+      return;
+    }
+
+    Alert.alert(
+      `${outcome.requiredGroupsMet} of ${outcome.requiredGroupsTotal} muscle groups met`,
+      `${outstanding} still outstanding. Finish anyway?`,
+      [
+        { text: 'Keep going', style: 'cancel' },
+        {
+          text: 'Finish',
+          onPress: () => {
+            finishSession(session.id);
+            leave();
+          },
+        },
+      ],
+    );
+  };
+
+  /** Deliberately harder to reach than Finish, and destructive. */
+  const abandon = () => {
+    const sets = session.sets.length;
+    Alert.alert(
+      'Abandon this session?',
+      sets === 0
+        ? 'It will not count as training.'
+        : `It will not count as training. The ${sets} ${sets === 1 ? 'set' : 'sets'} already logged are kept.`,
+      [
+        { text: 'Keep going', style: 'cancel' },
+        {
+          text: 'Abandon',
+          style: 'destructive',
+          onPress: () => {
+            abandonSession(session.id);
+            leave();
+          },
+        },
+      ],
+    );
+  };
   const required = outcome.groups.filter((g) => !g.optional);
   const optional = outcome.groups.filter((g) => g.optional);
   const next = outstandingGroups(outcome).find((g) => !g.optional);
@@ -84,16 +138,9 @@ export default function SessionScreen() {
             </ThemedText>
           </View>
 
-          {/* Always reachable, however little was logged. */}
-          <Pressable
-            onPress={() => {
-              finishSession(session.id);
-              router.back();
-            }}
-            style={styles.headerButton}
-            accessibilityRole="button">
-            <ThemedText type="link">Finish</ThemedText>
-          </Pressable>
+          {/* Balances the ✕ so the title stays centred. Finishing lives at
+              the foot of the screen, with abandoning, where the session ends. */}
+          <View style={styles.headerButton} />
         </View>
 
         <ScrollView contentContainerStyle={styles.scroll}>
@@ -142,6 +189,29 @@ export default function SessionScreen() {
               ))}
             </>
           )}
+
+          {/* The end of the list is where the session ends. Finishing is a
+              button because it is the ordinary way out; abandoning stays a
+              quiet link because it is not. */}
+          <View style={styles.endActions}>
+            {/* Outlined, not filled: Continue is the primary action and this
+                ends the session. Two identical pills would say they weigh the
+                same, which they do not. */}
+            <Pressable
+              onPress={finish}
+              accessibilityRole="button"
+              style={[styles.finish, { borderColor: colors.border }]}>
+              <ThemedText type="smallBold">
+                {outcome.successful ? 'Finish session' : 'Finish session early'}
+              </ThemedText>
+            </Pressable>
+
+            <Pressable onPress={abandon} accessibilityRole="button" style={styles.abandon}>
+              <ThemedText type="small" style={{ color: colors.warning }}>
+                Abandon session
+              </ThemedText>
+            </Pressable>
+          </View>
         </ScrollView>
 
         {next && (
@@ -300,4 +370,17 @@ const styles = StyleSheet.create({
     gap: Spacing.half,
   },
   linkButton: { minHeight: MinTouchTarget, justifyContent: 'center' },
+  endActions: { marginTop: Spacing.five, gap: Spacing.two },
+  finish: {
+    minHeight: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Spacing.four,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  abandon: {
+    minHeight: MinTouchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

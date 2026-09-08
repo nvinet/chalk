@@ -112,3 +112,37 @@ test("ties break on display order, so the answer is stable", () => {
 test("no families means no suggestion rather than a crash", () => {
   assert.equal(suggestFamily([], []), null);
 });
+
+// ---------------------------------------------------------- abandoned (#59)
+
+function abandoned(familyId: string, date: string): Session {
+  return { ...session(familyId, date), status: "abandoned" };
+}
+
+test("an abandoned session does not count as training this week", () => {
+  const week = sessionsThisWeek([abandoned("push", "2026-09-08")], "2026-09-08");
+  assert.deepEqual(week, []);
+});
+
+test("an abandoned session does not mark a family as recently trained", () => {
+  // The whole point of abandoning: it must not push that family down the order.
+  const sessions = [
+    session("push", "2026-09-01"),
+    abandoned("pull", "2026-09-08"),
+    session("legs", "2026-09-02"),
+  ];
+  assert.equal(suggestFamily(families, sessions)?.id, "pull");
+});
+
+test("an in-progress session still counts — it is happening", () => {
+  const live: Session = { ...session("push", "2026-09-08"), status: "inProgress" };
+  assert.equal(sessionsThisWeek([live], "2026-09-08").length, 1);
+});
+
+test("last done ignores an abandoned session in favour of a real one", () => {
+  const latest = lastSessionByFamily([
+    session("push", "2026-09-01"),
+    abandoned("push", "2026-09-08"),
+  ]);
+  assert.equal(latest.get("push")?.date, "2026-09-01");
+});

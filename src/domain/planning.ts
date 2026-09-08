@@ -23,10 +23,22 @@ export function startOfWeek(date: IsoDate): IsoDate {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+/**
+ * A session that counts as training.
+ *
+ * Abandoned sessions do not. Abandoning says the session did not happen, so
+ * letting one mark a family as trained would defeat the only reason abandon
+ * exists (#59).
+ */
+export function counts(session: Session): boolean {
+  return session.status !== "abandoned";
+}
+
 /** Sessions logged in the week containing `today`, most recent first. */
 export function sessionsThisWeek(sessions: Session[], today: IsoDate): Session[] {
   const from = startOfWeek(today);
   return sessions
+    .filter(counts)
     .filter((s) => s.date >= from && s.date <= today)
     .sort((a, b) => (a.date < b.date ? 1 : -1));
 }
@@ -47,7 +59,7 @@ export function countsByFamily(
 /** The most recent session for each family, whenever it was. */
 export function lastSessionByFamily(sessions: Session[]): Map<Id, Session> {
   const latest = new Map<Id, Session>();
-  for (const session of sessions) {
+  for (const session of sessions.filter(counts)) {
     const held = latest.get(session.familyId);
     if (!held || held.date < session.date) latest.set(session.familyId, session);
   }
