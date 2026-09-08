@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, MinTouchTarget, Spacing } from '@/constants/theme';
 import { createExercise, useExercises } from '@/db/repository';
+import { searchExercises } from '@/domain/search';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -22,15 +23,7 @@ export default function ExercisesScreen() {
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
 
-  const matches = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (needle === '') return exercises;
-    return exercises.filter(
-      (e) =>
-        e.name.toLowerCase().includes(needle) ||
-        e.aliases.some((a) => a.toLowerCase().includes(needle)),
-    );
-  }, [exercises, query]);
+  const matches = useMemo(() => searchExercises(exercises, query), [exercises, query]);
 
   const add = () => {
     const name = newName.trim();

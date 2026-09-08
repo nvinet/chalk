@@ -9,6 +9,7 @@ import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { appliedMigrationCount, catalogueCounts } from '@/db';
 import { checkDatabaseHealth } from '@/db/health';
+import { listMuscleGroups } from '@/db/repository';
 
 /**
  * Settings, taxonomy editors and export live here (W12, #15-#17, #48).
@@ -18,16 +19,26 @@ import { checkDatabaseHealth } from '@/db/health';
  *
  * The diagnostics stay for the moment. They are cheap, they answer the first
  * question worth asking when something looks wrong, and unlike the session card
- * nothing else in the app reports them.
+ * nothing else in the app reports them. What the catalogue holds is no longer
+ * among them: the counts belong beside the editor that changes them, not in a
+ * second list saying the same thing in a different order.
  */
 function useDatabaseHints() {
   // Reads, never runs. The root layout applies migrations and seeds the
   // catalogue before any screen mounts.
-  const [snapshot] = useState(() => ({
-    health: checkDatabaseHealth(),
-    migrations: appliedMigrationCount(),
-    catalogue: catalogueCounts(),
-  }));
+  const [snapshot] = useState(() => {
+    const counts = catalogueCounts();
+    return {
+      health: checkDatabaseHealth(),
+      migrations: appliedMigrationCount(),
+      catalogue: {
+        ...counts,
+        // The implicit group behind abs and cardio is a modelling device, not
+        // something he named. The editor hides it; so does this count.
+        muscleGroups: listMuscleGroups().filter((g) => !g.implicit).length,
+      },
+    };
+  });
 
   return snapshot;
 }
@@ -56,15 +67,6 @@ export default function MoreScreen() {
             title="Migrations"
             hint={<ThemedText type="small">{migrations} applied</ThemedText>}
           />
-          <HintRow
-            title="Catalogue"
-            hint={
-              <ThemedText type="small">
-                {catalogue.exercises} exercises, {catalogue.muscleGroups} groups,{' '}
-                {catalogue.families} families
-              </ThemedText>
-            }
-          />
         </ThemedView>
 
         <ThemedText type="code" style={styles.heading}>
@@ -76,14 +78,20 @@ export default function MoreScreen() {
             accessibilityRole="button">
             <HintRow
               title="Muscle groups"
-              hint={<ThemedText type="link">edit ›</ThemedText>}
+              hint={<ThemedText type="link">{catalogue.muscleGroups} ›</ThemedText>}
             />
           </Pressable>
           <Pressable onPress={() => router.push('/catalogue/families')} accessibilityRole="button">
-            <HintRow title="Families" hint={<ThemedText type="link">edit ›</ThemedText>} />
+            <HintRow
+              title="Families"
+              hint={<ThemedText type="link">{catalogue.families} ›</ThemedText>}
+            />
           </Pressable>
           <Pressable onPress={() => router.push('/catalogue/exercises')} accessibilityRole="button">
-            <HintRow title="Exercises" hint={<ThemedText type="link">edit ›</ThemedText>} />
+            <HintRow
+              title="Exercises"
+              hint={<ThemedText type="link">{catalogue.exercises} ›</ThemedText>}
+            />
           </Pressable>
         </ThemedView>
 
