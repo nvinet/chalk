@@ -6,16 +6,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, MinTouchTarget, Spacing } from '@/constants/theme';
+import { promptForSkipReason } from '@/components/skip-reason-prompt';
 import {
   exercisesForMuscleGroup,
   listExercises,
   listMuscleGroups,
   recentSessionsForMuscleGroup,
+  skipExercise,
   useSession,
 } from '@/db/repository';
 import { evaluateSession } from '@/domain/completion';
 import { lastTimeForPairing } from '@/domain/scoring';
-import type { Exercise, Session } from '@/domain/types';
+import { skipReasonLabel, type Exercise, type Session, type SetEntry } from '@/domain/types';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -57,6 +59,14 @@ export default function MuscleGroupScreen() {
   const outcome = evaluateSession(session, { exercises: data.allExercises });
   const group = outcome.groups.find((g) => g.muscleGroupId === groupId);
   const loggedHere = new Set(group?.exerciseIds ?? []);
+
+  // Skipped sets for this group, so a card can say it was passed on rather
+  // than looking simply untouched.
+  const skippedHere = new Map(
+    session?.sets
+      .filter((s) => s.muscleGroupId === groupId && s.skipped)
+      .map((s) => [s.exerciseId, s]) ?? [],
+  );
 
   // Reachable only by a stale link or a hand-typed URL: W2 lists this
   // session's own groups. Saying so beats a screen with a blank subtitle and
@@ -120,6 +130,12 @@ export default function MuscleGroupScreen() {
               groupName={data.name}
               history={data.history}
               logged={loggedHere.has(exercise.id)}
+              skippedSet={skippedHere.get(exercise.id) ?? null}
+              onSkip={() =>
+                promptForSkipReason(`Skip ${exercise.name}?`, (reason) =>
+                  skipExercise(id, exercise.id, groupId, reason),
+                )
+              }
               onLog={() =>
                 router.push({
                   pathname: '/session/[id]/[groupId]/[exerciseId]',
@@ -163,6 +179,8 @@ function ExerciseCard({
   groupName,
   history,
   logged,
+  skippedSet,
+  onSkip,
   onLog,
 }: {
   exercise: Exercise;
@@ -170,6 +188,8 @@ function ExerciseCard({
   groupName: string;
   history: Session[];
   logged: boolean;
+  skippedSet: SetEntry | null;
+  onSkip: () => void;
   onLog: () => void;
 }) {
   const colors = useTheme();
@@ -180,17 +200,27 @@ function ExerciseCard({
   return (
     <Pressable
       onPress={onLog}
+      onLongPress={onSkip}
       accessibilityRole="button"
       accessibilityLabel={`Log ${exercise.name}`}
+      accessibilityHint="Long press to skip this exercise"
       style={[styles.card, { borderColor: logged ? colors.met : colors.border }]}>
       <View style={styles.cardBody}>
         <ThemedText type="smallBold">
           {logged ? '✓ ' : ''}
           {exercise.name}
         </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          {last ? `${last.date} · ${last.summary}` : `not used for ${groupName.toLowerCase()} yet`}
-        </ThemedText>
+        {skippedSet ? (
+          <ThemedText type="small" style={{ color: colors.warning }}>
+            Skipped — {skipReasonLabel(skippedSet.skipReason).toLowerCase()}
+          </ThemedText>
+        ) : (
+          <ThemedText type="small" themeColor="textSecondary">
+            {last
+              ? `${last.date} · ${last.summary}`
+              : `not used for ${groupName.toLowerCase()} yet`}
+          </ThemedText>
+        )}
       </View>
       <View style={[styles.logButton, { borderColor: colors.accent }]}>
         <ThemedText type="smallBold">Log</ThemedText>

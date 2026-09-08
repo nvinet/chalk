@@ -64,6 +64,13 @@ export const sessionRequirements = sqliteTable(
       .references(() => muscleGroups.id),
     position: integer("position").notNull(),
     requiredExerciseCount: integer("required_exercise_count").notNull(),
+    /**
+     * Skipping documents why a group was not trained; it never satisfies it
+     * (#24). A skipped group with a required count above 0 still fails the
+     * session — honestly, with a reason, rather than silently.
+     */
+    skipped: integer("skipped", { mode: "boolean" }).notNull().default(false),
+    skipReason: text("skip_reason"),
   },
   (t) => [primaryKey({ columns: [t.sessionId, t.muscleGroupId] })],
 );

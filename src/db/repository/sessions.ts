@@ -10,10 +10,10 @@ import { and, asc, desc, eq } from 'drizzle-orm';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { useMemo } from 'react';
 
-import type { Id, IsoDate, Session, SetEntry } from '../../domain/types';
+import type { Id, IsoDate, Session, SetEntry, SkipReason } from '../../domain/types';
 import { db } from '../client';
 import { newId, today } from '../ids';
-import { toSession, toSetEntry } from '../mappers';
+import { toSession, toSetEntry, toSkipReason } from '../mappers';
 import {
   familyMuscleGroups,
   muscleGroups,
@@ -109,6 +109,8 @@ export function getSession(id: Id): Session | null {
     .map((r) => ({
       muscleGroupId: r.muscleGroupId,
       requiredExerciseCount: r.requiredExerciseCount,
+      skipped: r.skipped,
+      skipReason: toSkipReason(r.skipReason),
     }));
 
   const sets = db
@@ -192,6 +194,8 @@ export function useSession(id: Id): Session | null {
       .map((r) => ({
         muscleGroupId: r.muscleGroupId,
         requiredExerciseCount: r.requiredExerciseCount,
+        skipped: r.skipped,
+        skipReason: toSkipReason(r.skipReason),
       }));
 
     return { row, requirements };
@@ -235,6 +239,8 @@ export function recentSessionsForMuscleGroup(
 
 /** What a set records, before it knows its number. */
 export interface SetInput {
+  skipped?: boolean;
+  skipReason?: SkipReason | null;
   reps?: number | null;
   weightKg?: number | null;
   durationSeconds?: number | null;
@@ -287,6 +293,8 @@ export function logSet(
       durationSeconds: input.durationSeconds ?? null,
       distanceM: input.distanceM ?? null,
       warmup: input.warmup ?? false,
+      skipped: input.skipped ?? false,
+      skipReason: input.skipReason ?? null,
       note: input.note ?? null,
     })
     .run();
@@ -364,4 +372,59 @@ export function useRecentSessions(limit = 60): Session[] {
       }),
     [live.data],
   );
+}
+
+/**
+ * Records that a muscle group was passed on, and why (#24).
+ *
+ * Written on the requirement rather than as a set, because it is a fact about
+ * the group and not about any exercise. It never satisfies the group: the
+ * session still fails, honestly, with a reason attached.
+ */
+export function skipMuscleGroup(
+  sessionId: Id,
+  muscleGroupId: Id,
+  reason: SkipReason,
+): void {
+  db.update(sessionRequirements)
+    .set({ skipped: true, skipReason: reason })
+    .where(
+      and(
+        eq(sessionRequirements.sessionId, sessionId),
+        eq(sessionRequirements.muscleGroupId, muscleGroupId),
+      ),
+    )
+    .run();
+}
+
+/** Changed his mind. The group goes back to simply untrained. */
+export function unskipMuscleGroup(sessionId: Id, muscleGroupId: Id): void {
+  db.update(sessionRequirements)
+    .set({ skipped: false, skipReason: null })
+    .where(
+      and(
+        eq(sessionRequirements.sessionId, sessionId),
+        eq(sessionRequirements.muscleGroupId, muscleGroupId),
+      ),
+    )
+    .run();
+}
+
+/**
+ * Records that one exercise was passed on, and why.
+ *
+ * A skipped set, so it lives with the work it stands in for and shows in the
+ * exercise's own history. `isSetLogged` rejects anything skipped, so it can
+ * never count towards the group.
+ */
+export function skipExercise(
+  sessionId: Id,
+  exerciseId: Id,
+  muscleGroupId: Id,
+  reason: SkipReason,
+): SetEntry {
+  return logSet(sessionId, exerciseId, muscleGroupId, {
+    skipped: true,
+    skipReason: reason,
+  });
 }

@@ -363,3 +363,83 @@ test("requirementsForFamily reads the counts as they are now", () => {
   );
   assert.equal(chest?.requiredExerciseCount, 3);
 });
+
+// ---------------------------------------------------------------------------
+// Skipping (#24)
+// ---------------------------------------------------------------------------
+
+test("a skipped group fails the session rather than silently passing", () => {
+  // The whole point: skipping records why, it never satisfies.
+  const s = session(
+    [],
+    [
+      {
+        muscleGroupId: "chest",
+        requiredExerciseCount: 1,
+        skipped: true,
+        skipReason: "equipmentBusy",
+      },
+    ],
+  );
+  const outcome = evaluateSession(s, { exercises });
+  assert.equal(outcome.successful, false);
+  assert.equal(outcome.groups[0]?.met, false);
+});
+
+test("a skipped group carries its reason through to the outcome", () => {
+  const s = session(
+    [],
+    [
+      {
+        muscleGroupId: "chest",
+        requiredExerciseCount: 1,
+        skipped: true,
+        skipReason: "injury",
+      },
+    ],
+  );
+  const group = evaluateSession(s, { exercises }).groups[0];
+  assert.equal(group?.skipped, true);
+  assert.equal(group?.skipReason, "injury");
+});
+
+test("a skipped group drops out of what is outstanding", () => {
+  // It still fails the session, but he has decided — pointing him back at it
+  // would be nagging.
+  const s = session(
+    [],
+    [
+      { muscleGroupId: "chest", requiredExerciseCount: 1, skipped: true },
+      { muscleGroupId: "shoulders", requiredExerciseCount: 1 },
+    ],
+  );
+  const outstanding = outstandingGroups(evaluateSession(s, { exercises })).map(
+    (g) => g.muscleGroupId,
+  );
+  assert.deepEqual(outstanding, ["shoulders"]);
+});
+
+test("logging into a skipped group still counts it as met", () => {
+  // Changing his mind should not need the skip undone first.
+  const s = session(
+    [set({ id: "1", exerciseId: "pec-fly", muscleGroupId: "chest", reps: 10, weightKg: 40 })],
+    [
+      {
+        muscleGroupId: "chest",
+        requiredExerciseCount: 1,
+        skipped: true,
+        skipReason: "equipmentBusy",
+      },
+    ],
+  );
+  const group = evaluateSession(s, { exercises }).groups[0];
+  assert.equal(group?.met, true);
+  assert.equal(group?.skipped, true);
+});
+
+test("a skipped set never counts as logged, whatever it records", () => {
+  assert.equal(
+    isSetLogged(set({ reps: 10, weightKg: 60, skipped: true }), "weightReps"),
+    false,
+  );
+});

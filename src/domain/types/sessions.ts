@@ -45,6 +45,12 @@ export interface SetEntry {
 export interface SessionRequirement {
   muscleGroupId: Id;
   requiredExerciseCount: number;
+  /**
+   * Set when he deliberately passed on this group. It records *why* the group
+   * went untrained; it never counts as training it (#24).
+   */
+  skipped?: boolean;
+  skipReason?: SkipReason | null;
 }
 
 export interface Session {
@@ -57,4 +63,17 @@ export interface Session {
   requirements: SessionRequirement[];
   sets: SetEntry[];
   notes?: string | null;
+}
+
+/** How a skip reads on screen. Ordered by how often it is the real answer. */
+export const SKIP_REASONS: readonly { id: SkipReason; label: string }[] = [
+  { id: "equipmentBusy", label: "Equipment busy" },
+  { id: "equipmentBroken", label: "Equipment broken" },
+  { id: "shortOfTime", label: "Short of time" },
+  { id: "injury", label: "Injury" },
+  { id: "other", label: "Other" },
+];
+
+export function skipReasonLabel(reason: SkipReason | null | undefined): string {
+  return SKIP_REASONS.find((r) => r.id === reason)?.label ?? "Skipped";
 }

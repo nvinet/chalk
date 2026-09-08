@@ -22,10 +22,11 @@
 
 import type {
   Catalogue,
-  Id,
   Exercise,
+  Id,
   Session,
   SetEntry,
+  SkipReason,
   TrackingType,
 } from "./types.ts";
 export { isWeightBased } from "./types.ts";
@@ -89,6 +90,9 @@ export function exercisesLoggedForGroup(
 export interface MuscleGroupOutcome {
   muscleGroupId: Id;
   required: number;
+  /** He passed on this group deliberately, and said why (#24). */
+  skipped: boolean;
+  skipReason?: SkipReason | null;
   /** Distinct exercises properly logged for this group in this session. */
   exerciseIds: Id[];
   loggedCount: number;
@@ -119,9 +123,18 @@ export function evaluateMuscleGroup(
 ): MuscleGroupOutcome {
   const exerciseIds = exercisesLoggedForGroup(session, muscleGroupId, exercisesById);
   const optional = required <= 0;
+  const requirement = session.requirements.find(
+    (r) => r.muscleGroupId === muscleGroupId,
+  );
+
   return {
     muscleGroupId,
     required,
+    // Skipping says why a group went untrained. It is deliberately absent from
+    // `met`: a skipped group with a required count above 0 fails the session
+    // honestly rather than silently satisfying it (#24).
+    skipped: requirement?.skipped ?? false,
+    skipReason: requirement?.skipReason ?? null,
     exerciseIds,
     loggedCount: exerciseIds.length,
     met: optional || exerciseIds.length >= required,
@@ -164,9 +177,12 @@ export function evaluateSession(
 /**
  * The muscle groups still standing between him and a successful session.
  * Drives the "Continue › Triceps" button on the session screen (W2).
+ *
+ * A skipped group is left out: it still fails the session, but he has already
+ * decided about it, so pointing him back at it would be nagging.
  */
 export function outstandingGroups(outcome: SessionOutcome): MuscleGroupOutcome[] {
-  return outcome.groups.filter((g) => !g.met);
+  return outcome.groups.filter((g) => !g.met && !g.skipped);
 }
 
 /** Build the requirement snapshot for a new session from the current catalogue. */

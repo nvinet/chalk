@@ -6,11 +6,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, MinTouchTarget, Spacing } from '@/constants/theme';
+import { promptForSkipReason } from '@/components/skip-reason-prompt';
 import {
   abandonSession,
   finishSession,
   listExercises,
   listMuscleGroups,
+  skipMuscleGroup,
+  unskipMuscleGroup,
   useSession,
 } from '@/db/repository';
 import {
@@ -20,7 +23,7 @@ import {
   type MuscleGroupOutcome,
 } from '@/domain/completion';
 import { lastTimeForPairing } from '@/domain/scoring';
-import type { Exercise, Id, Session } from '@/domain/types';
+import { skipReasonLabel, type Exercise, type Id, type Session } from '@/domain/types';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -168,6 +171,7 @@ export default function SessionScreen() {
               exercisesById={exercisesById}
               highlighted={group.muscleGroupId === next?.muscleGroupId}
               onPress={() => openGroup(session.id, group.muscleGroupId)}
+              onToggleSkip={() => toggleSkip(session.id, group)}
             />
           ))}
 
@@ -185,6 +189,7 @@ export default function SessionScreen() {
                   exercisesById={exercisesById}
                   highlighted={false}
                   onPress={() => openGroup(session.id, group.muscleGroupId)}
+                  onToggleSkip={() => toggleSkip(session.id, group)}
                 />
               ))}
             </>
@@ -230,6 +235,17 @@ export default function SessionScreen() {
   );
 }
 
+/** Long-press a group to pass on it, or to change your mind. */
+function toggleSkip(sessionId: string, group: MuscleGroupOutcome) {
+  if (group.skipped) {
+    unskipMuscleGroup(sessionId, group.muscleGroupId);
+    return;
+  }
+  promptForSkipReason('Skip this muscle group?', (reason) =>
+    skipMuscleGroup(sessionId, group.muscleGroupId, reason),
+  );
+}
+
 function openGroup(sessionId: string, groupId: string) {
   router.push({
     pathname: '/session/[id]/[groupId]',
@@ -244,6 +260,7 @@ function GroupRow({
   exercisesById,
   highlighted,
   onPress,
+  onToggleSkip,
 }: {
   group: MuscleGroupOutcome;
   name: string;
@@ -251,14 +268,17 @@ function GroupRow({
   exercisesById: ReadonlyMap<Id, Exercise>;
   highlighted: boolean;
   onPress: () => void;
+  onToggleSkip: () => void;
 }) {
   const colors = useTheme();
 
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onToggleSkip}
       accessibilityRole="button"
       accessibilityLabel={`Open ${name}`}
+      accessibilityHint="Long press to skip this muscle group"
       style={[
         styles.group,
         { borderColor: colors.border },
@@ -277,6 +297,14 @@ function GroupRow({
             ? '0 required — never blocks the session'
             : `${group.loggedCount} of ${group.required} exercises logged`}
         </ThemedText>
+        {group.skipped && (
+          // Says why it went untrained. It does not excuse it: the group is
+          // still unmet and the session still fails (#24).
+          <ThemedText type="small" style={{ color: colors.warning }}>
+            Skipped — {skipReasonLabel(group.skipReason).toLowerCase()}
+            {group.met ? ', but logged anyway' : ''}
+          </ThemedText>
+        )}
       </View>
 
       {group.exerciseIds.map((exerciseId) => {
@@ -299,7 +327,7 @@ function GroupRow({
         );
       })}
 
-      {!group.met && !group.optional && group.loggedCount === 0 && (
+      {!group.met && !group.optional && !group.skipped && group.loggedCount === 0 && (
         <ThemedText type="small" themeColor="textSecondary">
           nothing logged yet
         </ThemedText>

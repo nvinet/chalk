@@ -15,6 +15,13 @@
       "when": 1788860198199,
       "tag": "0001_one_session_in_progress",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788878349768,
+      "tag": "0002_skip_a_muscle_group",
+      "breakpoints": true
     }
   ]
 }
