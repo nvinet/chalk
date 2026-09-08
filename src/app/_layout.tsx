@@ -72,6 +72,8 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           {/* A session covers the tabs: it is a mode, not a destination. */}
           <Stack.Screen name="session/[id]" />
+          {/* Catalogue editors, reached from More. */}
+          <Stack.Screen name="catalogue/muscle-groups" />
         </Stack>
       </View>
     </ThemeProvider>

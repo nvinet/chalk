@@ -10,17 +10,22 @@
  * possible — and it means logging a set never waits on a promise.
  */
 
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, count, desc, eq } from 'drizzle-orm';
+import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
+import { useMemo } from 'react';
 
-import type { Id, Exercise, MuscleGroup } from '../../domain/types';
+import type { Exercise, Family, Id, MuscleGroup } from '../../domain/types';
 import { db } from '../client';
+import { newId } from '../ids';
 import { toFamily, toExercise, toMuscleGroup } from '../mappers';
 import {
-  families,
-  familyMuscleGroups,
   exerciseMuscleGroups,
   exercises,
+  families,
+  familyMuscleGroups,
   muscleGroups,
+  sessionRequirements,
+  setEntries,
 } from '../schema';
 
 /** A muscle group as it appears inside one family, with that family's count. */
@@ -106,4 +111,150 @@ export function listExercises(): Exercise[] {
 /** Every muscle group, for looking up names by id. */
 export function listMuscleGroups(): MuscleGroup[] {
   return db.select().from(muscleGroups).all().map(toMuscleGroup);
+}
+
+/* ------------------------------------------------------------------ writes */
+
+/**
+ * Whether anything logged refers to this row.
+ *
+ * Decides archive versus delete. The foreign keys from set_entries and
+ * session_requirements restrict rather than cascade, so deleting something
+ * history mentions would fail at the database anyway — this asks first, so the
+ * screen can explain instead of showing a constraint error.
+ */
+export interface Usage {
+  sets: number;
+  sessions: number;
+}
+
+export function muscleGroupUsage(id: Id): Usage {
+  return {
+    sets:
+      db
+        .select({ n: count() })
+        .from(setEntries)
+        .where(eq(setEntries.muscleGroupId, id))
+        .get()?.n ?? 0,
+    sessions:
+      db
+        .select({ n: count() })
+        .from(sessionRequirements)
+        .where(eq(sessionRequirements.muscleGroupId, id))
+        .get()?.n ?? 0,
+  };
+}
+
+export function exerciseUsage(id: Id): Usage {
+  return {
+    sets:
+      db.select({ n: count() }).from(setEntries).where(eq(setEntries.exerciseId, id)).get()
+        ?.n ?? 0,
+    sessions: 0,
+  };
+}
+
+export function isUsed(usage: Usage): boolean {
+  return usage.sets > 0 || usage.sessions > 0;
+}
+
+/**
+ * Adds a muscle group and puts it in a family.
+ *
+ * A group outside every family can never be trained, so the two are one action
+ * rather than two — there is no useful intermediate state to leave him in.
+ */
+export function createMuscleGroup(name: string, familyId: Id): Id {
+  const id = newId('group');
+
+  db.transaction((tx) => {
+    const lastPosition =
+      tx
+        .select({ position: muscleGroups.position })
+        .from(muscleGroups)
+        .orderBy(desc(muscleGroups.position))
+        .get()?.position ?? 0;
+
+    tx.insert(muscleGroups)
+      .values({ id, name: name.trim(), position: lastPosition + 1 })
+      .run();
+
+    const lastInFamily =
+      tx
+        .select({ position: familyMuscleGroups.position })
+        .from(familyMuscleGroups)
+        .where(eq(familyMuscleGroups.familyId, familyId))
+        .orderBy(desc(familyMuscleGroups.position))
+        .get()?.position ?? 0;
+
+    tx.insert(familyMuscleGroups)
+      .values({
+        familyId,
+        muscleGroupId: id,
+        position: lastInFamily + 1,
+        requiredExerciseCount: 1,
+      })
+      .run();
+  });
+
+  return id;
+}
+
+export function renameMuscleGroup(id: Id, name: string): void {
+  db.update(muscleGroups).set({ name: name.trim() }).where(eq(muscleGroups.id, id)).run();
+}
+
+/**
+ * Archiving keeps the row, so history that refers to it still resolves. A past
+ * session reads exactly the same afterwards.
+ */
+export function setMuscleGroupArchived(id: Id, archived: boolean): void {
+  db.update(muscleGroups).set({ archived }).where(eq(muscleGroups.id, id)).run();
+}
+
+/** Only ever call this when `isUsed` is false; the foreign keys refuse otherwise. */
+export function deleteMuscleGroup(id: Id): void {
+  db.transaction((tx) => {
+    tx.delete(exerciseMuscleGroups)
+      .where(eq(exerciseMuscleGroups.muscleGroupId, id))
+      .run();
+    tx.delete(familyMuscleGroups).where(eq(familyMuscleGroups.muscleGroupId, id)).run();
+    tx.delete(muscleGroups).where(eq(muscleGroups.id, id)).run();
+  });
+}
+
+/** Writes the given order as positions, so a drag or a move survives a reload. */
+export function reorderMuscleGroups(idsInOrder: Id[]): void {
+  db.transaction((tx) => {
+    idsInOrder.forEach((id, index) => {
+      tx.update(muscleGroups)
+        .set({ position: index + 1 })
+        .where(eq(muscleGroups.id, id))
+        .run();
+    });
+  });
+}
+
+/** Which family a group belongs to, if any. A group can only be in one. */
+export function familyOfMuscleGroup(id: Id): Family | null {
+  const row = db
+    .select({ family: families })
+    .from(familyMuscleGroups)
+    .innerJoin(families, eq(families.id, familyMuscleGroups.familyId))
+    .where(eq(familyMuscleGroups.muscleGroupId, id))
+    .get();
+  return row ? toFamily(row.family) : null;
+}
+
+/**
+ * Muscle groups, kept live.
+ *
+ * The editor writes through this same connection, so SQLite's update hook
+ * fires and the list re-reads itself. Without it the screen would need a
+ * counter bumped by hand after every edit, which is a dependency the linter
+ * rightly cannot see the point of.
+ */
+export function useMuscleGroups(): MuscleGroup[] {
+  const live = useLiveQuery(db.select().from(muscleGroups).orderBy(asc(muscleGroups.position)));
+  return useMemo(() => (live.data ?? []).map(toMuscleGroup), [live.data]);
 }

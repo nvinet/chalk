@@ -1,5 +1,6 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { HintRow } from '@/components/hint-row';
@@ -67,11 +68,25 @@ export default function MoreScreen() {
         </ThemedView>
 
         <ThemedText type="code" style={styles.heading}>
+          catalogue
+        </ThemedText>
+        <ThemedView type="backgroundElement" style={styles.card}>
+          <Pressable
+            onPress={() => router.push('/catalogue/muscle-groups')}
+            accessibilityRole="button">
+            <HintRow
+              title="Muscle groups"
+              hint={<ThemedText type="link">edit ›</ThemedText>}
+            />
+          </Pressable>
+          <HintRow title="Families" hint={<ThemedText type="small">#15</ThemedText>} />
+          <HintRow title="Exercises" hint={<ThemedText type="small">#16</ThemedText>} />
+        </ThemedView>
+
+        <ThemedText type="code" style={styles.heading}>
           not built yet
         </ThemedText>
         <ThemedView type="backgroundElement" style={styles.card}>
-          <HintRow title="Families" hint={<ThemedText type="small">#15</ThemedText>} />
-          <HintRow title="Exercises" hint={<ThemedText type="small">#16</ThemedText>} />
           <HintRow title="Settings" hint={<ThemedText type="small">#48</ThemedText>} />
           <HintRow title="Export" hint={<ThemedText type="small">#30</ThemedText>} />
         </ThemedView>
