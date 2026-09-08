@@ -320,3 +320,46 @@ test("a timed exercise is logged on duration and contributes no weight", () => {
   assert.equal(isSetLogged(set({ durationSeconds: 900 }), timedExercise.tracking), true);
   assert.equal(isSetLogged(set({ reps: 10, weightKg: 20 }), timedExercise.tracking), false);
 });
+
+// ---------------------------------------------------------------------------
+// The requirement snapshot (#19)
+// ---------------------------------------------------------------------------
+
+test("a session is scored against its own snapshot, not the current family", () => {
+  // The session was started when chest needed one exercise. The family has
+  // since been raised to two. The logged session must not change.
+  const s = session(
+    [set({ id: "1", exerciseId: "pec-fly", muscleGroupId: "chest", reps: 10, weightKg: 40 })],
+    [{ muscleGroupId: "chest", requiredExerciseCount: 1 }],
+  );
+
+  const raised = {
+    ...seedCatalogue,
+    familyMuscleGroups: seedCatalogue.familyMuscleGroups.map((f) =>
+      f.muscleGroupId === "chest" ? { ...f, requiredExerciseCount: 2 } : f,
+    ),
+  };
+
+  // The catalogue now asks for two...
+  assert.equal(
+    requirementsForFamily("push", raised).find((r) => r.muscleGroupId === "chest")
+      ?.requiredExerciseCount,
+    2,
+  );
+  // ...but the session already logged still succeeds on the one it recorded.
+  assert.equal(evaluateSession(s, { exercises }).successful, true);
+});
+
+test("requirementsForFamily reads the counts as they are now", () => {
+  // The other half: a session started today must pick up the current numbers.
+  const raised = {
+    ...seedCatalogue,
+    familyMuscleGroups: seedCatalogue.familyMuscleGroups.map((f) =>
+      f.muscleGroupId === "chest" ? { ...f, requiredExerciseCount: 3 } : f,
+    ),
+  };
+  const chest = requirementsForFamily("push", raised).find(
+    (r) => r.muscleGroupId === "chest",
+  );
+  assert.equal(chest?.requiredExerciseCount, 3);
+});

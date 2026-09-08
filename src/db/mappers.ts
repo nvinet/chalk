@@ -10,8 +10,24 @@
  * module directly. The schema import is type-only and strips away at runtime.
  */
 
-import type { Family, Exercise, MuscleGroup, TrackingType } from "../domain/types.ts";
-import type { FamilyRow, ExerciseRow, MuscleGroupRow } from "./schema.ts";
+import type {
+  Exercise,
+  Family,
+  MuscleGroup,
+  Session,
+  SessionRequirement,
+  SessionStatus,
+  SetEntry,
+  SkipReason,
+  TrackingType,
+} from "../domain/types.ts";
+import type {
+  ExerciseRow,
+  FamilyRow,
+  MuscleGroupRow,
+  SessionRow,
+  SetEntryRow,
+} from "./schema.ts";
 
 const TRACKING_TYPES: readonly string[] = ["weightReps", "duration", "distance"];
 
@@ -57,5 +73,72 @@ export function toExercise(row: ExerciseRow): Exercise {
     defaultRestSeconds: row.defaultRestSeconds,
     notes: row.notes,
     archived: row.archived,
+  };
+}
+
+/* ---------------------------------------------------------------- sessions */
+
+/**
+ * `status` and `skip_reason` are free text in SQLite, so both narrow on the way
+ * out. As with tracking, an unrecognised value falls back rather than throwing:
+ * a corrupt row must not stop him mid-session.
+ */
+const SESSION_STATUSES: readonly string[] = ["inProgress", "finished", "abandoned"];
+
+export function toSessionStatus(value: string): SessionStatus {
+  return SESSION_STATUSES.includes(value) ? (value as SessionStatus) : "inProgress";
+}
+
+const SKIP_REASONS: readonly string[] = [
+  "equipmentBusy",
+  "equipmentBroken",
+  "injury",
+  "shortOfTime",
+  "other",
+];
+
+export function toSkipReason(value: string | null): SkipReason | null {
+  if (value === null) return null;
+  return SKIP_REASONS.includes(value) ? (value as SkipReason) : "other";
+}
+
+export function toSetEntry(row: SetEntryRow): SetEntry {
+  return {
+    id: row.id,
+    sessionId: row.sessionId,
+    exerciseId: row.exerciseId,
+    muscleGroupId: row.muscleGroupId,
+    setNumber: row.setNumber,
+    reps: row.reps,
+    weightKg: row.weightKg,
+    durationSeconds: row.durationSeconds,
+    distanceM: row.distanceM,
+    warmup: row.warmup,
+    completed: row.completed,
+    skipped: row.skipped,
+    skipReason: toSkipReason(row.skipReason),
+    note: row.note,
+  };
+}
+
+/**
+ * A session is only meaningful with its requirements and sets, so it is
+ * assembled from three queries rather than mapped from one row.
+ */
+export function toSession(
+  row: SessionRow,
+  requirements: SessionRequirement[],
+  sets: SetEntry[],
+): Session {
+  return {
+    id: row.id,
+    familyId: row.familyId,
+    date: row.date,
+    startedAt: row.startedAt,
+    finishedAt: row.finishedAt,
+    status: toSessionStatus(row.status),
+    requirements,
+    sets,
+    notes: row.notes,
   };
 }
