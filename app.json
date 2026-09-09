@@ -9,6 +9,9 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "dev.chalk.app",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "icon": "./assets/expo.icon",
       "supportsTablet": true,
       "requireFullScreen": true
