@@ -52,6 +52,12 @@
         "projectId": "2788a0c4-3cf3-4772-9f2d-9e2863f58114"
       }
     },
-    "owner": "nicolasvinet"
+    "owner": "nicolasvinet",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/2788a0c4-3cf3-4772-9f2d-9e2863f58114"
+    }
   }
 }
