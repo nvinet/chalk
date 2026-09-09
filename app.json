@@ -8,6 +8,7 @@
     "scheme": "chalk",
     "userInterfaceStyle": "automatic",
     "ios": {
+      "bundleIdentifier": "dev.chalk.app",
       "icon": "./assets/expo.icon",
       "supportsTablet": true,
       "requireFullScreen": true
