@@ -72,6 +72,15 @@ export function estimatedOneRepMaxKg(reps: number, weightKg: number): number | n
 
 export interface PairingBest {
   heaviestKg: number | null;
+  /**
+   * Reps at the heaviest set, and the date it was done.
+   *
+   * The heaviest weight alone is not an answer to "what am I chasing" — 80 kg
+   * for one is a different target from 80 kg for eight. Ties on weight are
+   * broken by reps, so the best set at a given load is the one remembered.
+   */
+  heaviestReps: number | null;
+  heaviestOn: string | null;
   bestEstimatedOneRepMaxKg: number | null;
   bestSetVolumeKg: number | null;
 }
@@ -83,6 +92,8 @@ export function bestsForPairing(
   exercise: Exercise,
 ): PairingBest {
   let heaviest: number | null = null;
+  let heaviestReps: number | null = null;
+  let heaviestOn: string | null = null;
   let bestE1rm: number | null = null;
   let bestVolume: number | null = null;
 
@@ -93,7 +104,12 @@ export function bestsForPairing(
 
       const weight = set.weightKg ?? 0;
       const reps = set.reps ?? 0;
-      heaviest = heaviest === null ? weight : Math.max(heaviest, weight);
+      // Heavier always wins; at the same weight, more reps does.
+      if (heaviest === null || weight > heaviest || (weight === heaviest && reps > (heaviestReps ?? 0))) {
+        heaviest = weight;
+        heaviestReps = reps;
+        heaviestOn = session.date;
+      }
 
       const e1rm = estimatedOneRepMaxKg(reps, weight);
       if (e1rm !== null) bestE1rm = bestE1rm === null ? e1rm : Math.max(bestE1rm, e1rm);
@@ -104,6 +120,8 @@ export function bestsForPairing(
   }
   return {
     heaviestKg: heaviest,
+    heaviestReps,
+    heaviestOn,
     bestEstimatedOneRepMaxKg: bestE1rm,
     bestSetVolumeKg: bestVolume,
   };

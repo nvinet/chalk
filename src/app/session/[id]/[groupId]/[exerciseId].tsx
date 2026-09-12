@@ -13,6 +13,7 @@ import {
   listMuscleGroups,
   logSet,
   recentSessionsForMuscleGroup,
+  sessionsForPairing,
   removeSet,
   useSession,
 } from '@/db/repository';
@@ -33,7 +34,7 @@ import {
 } from '@/domain/measures';
 import { checkMeasures, referenceValues } from '@/domain/plausibility';
 import { isFinished, remainingSeconds, restProgress } from '@/domain/rest';
-import { lastTimeForPairing } from '@/domain/scoring';
+import { bestsForPairing, formatKg, lastTimeForPairing } from '@/domain/scoring';
 import { useRestTimer } from '@/hooks/use-rest-timer';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -61,6 +62,10 @@ export default function LogExerciseScreen() {
       allExercises: listExercises(),
       groupName: listMuscleGroups().find((g) => g.id === groupId)?.name ?? groupId,
       history: recentSessionsForMuscleGroup(groupId, id),
+      // Unwindowed, unlike `history`: a personal best over the last 20
+      // sessions would forget older lifts and let a beaten record come back
+      // as sessions aged out of the window (#67).
+      pairingHistory: sessionsForPairing(exerciseId, groupId, id),
     }),
     [exerciseId, groupId, id],
   );
@@ -75,6 +80,12 @@ export default function LogExerciseScreen() {
 
   const last = exercise
     ? lastTimeForPairing(context.history, { exerciseId, muscleGroupId: groupId }, exercise)
+    : null;
+
+  // What he is chasing, as opposed to what he last did. Null for timed and
+  // distance exercises, where "furthest" and "longest" are still M4's question.
+  const best = exercise
+    ? bestsForPairing(context.pairingHistory, { exerciseId, muscleGroupId: groupId }, exercise)
     : null;
 
   const [draft, setDraft] = useState<MeasureValues | null>(null);
@@ -180,6 +191,16 @@ export default function LogExerciseScreen() {
             <ThemedText type="small">
               {last ? `${last.date} · ${last.summary}` : 'not used for this group yet'}
             </ThemedText>
+            {/* One line, not a second panel: this sits above the steppers on
+                the screen N4 protects, and a target he cannot see while
+                choosing the load is no target at all (#67). */}
+            {best?.heaviestKg != null && (
+              <ThemedText type="small" themeColor="textSecondary">
+                best · {formatKg(best.heaviestKg)}
+                {best.heaviestReps ? ` × ${best.heaviestReps}` : ''}
+                {best.heaviestOn ? ` · ${best.heaviestOn}` : ''}
+              </ThemedText>
+            )}
           </ThemedView>
 
           {/* The note is written in the catalogue editor and read here (#66).

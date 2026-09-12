@@ -215,6 +215,41 @@ export function useSession(id: Id): Session | null {
  * `exclude` keeps the session in progress out of its own history — "last time"
  * means before today, not what was logged five minutes ago.
  */
+/**
+ * Every session containing a set for one pairing, oldest query first — no
+ * window (#67).
+ *
+ * `recentSessionsForMuscleGroup` caps at 20 sessions, which is right for "last
+ * time" and wrong for a personal best: a best computed over a window silently
+ * forgets older lifts, and a beaten record would reappear as sessions aged out
+ * of it. A personal best is over everything or it is not personal.
+ */
+export function sessionsForPairing(
+  exerciseId: Id,
+  muscleGroupId: Id,
+  exclude?: Id,
+): Session[] {
+  const ids = db
+    .selectDistinct({ sessionId: setEntries.sessionId, date: sessions.date })
+    .from(setEntries)
+    .innerJoin(sessions, eq(sessions.id, setEntries.sessionId))
+    .where(
+      and(
+        eq(setEntries.exerciseId, exerciseId),
+        eq(setEntries.muscleGroupId, muscleGroupId),
+      ),
+    )
+    .orderBy(desc(sessions.date))
+    .all()
+    .map((r) => r.sessionId)
+    .filter((sessionId) => sessionId !== exclude);
+
+  return ids.flatMap((sessionId) => {
+    const session = getSession(sessionId);
+    return session ? [session] : [];
+  });
+}
+
 export function recentSessionsForMuscleGroup(
   muscleGroupId: Id,
   exclude?: Id,

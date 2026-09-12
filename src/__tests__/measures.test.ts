@@ -171,3 +171,70 @@ test("a working set alongside a warm-up still counts", () => {
 test("indexById still round-trips exercises", () => {
   assert.equal(indexById([lift, jog]).get("jog")?.tracking, "distance");
 });
+
+// ------------------------------------------------- the personal best (#67)
+
+const pairing = { exerciseId: "bench", muscleGroupId: "chest" };
+
+test("the heaviest set wins, and carries its reps and its date", () => {
+  const best = bestsForPairing(
+    [
+      session([set({ id: "a", reps: 10, weightKg: 60 })], { id: "s1", date: "2026-08-01" }),
+      session([set({ id: "b", reps: 5, weightKg: 80 })], { id: "s2", date: "2026-08-08" }),
+      session([set({ id: "c", reps: 12, weightKg: 70 })], { id: "s3", date: "2026-08-15" }),
+    ],
+    pairing,
+    lift,
+  );
+  assert.equal(best.heaviestKg, 80);
+  assert.equal(best.heaviestReps, 5);
+  assert.equal(best.heaviestOn, "2026-08-08");
+});
+
+test("at the same weight, more reps is the better set", () => {
+  const best = bestsForPairing(
+    [
+      session([set({ id: "a", reps: 5, weightKg: 80 })], { id: "s1", date: "2026-08-01" }),
+      session([set({ id: "b", reps: 9, weightKg: 80 })], { id: "s2", date: "2026-08-08" }),
+      session([set({ id: "c", reps: 7, weightKg: 80 })], { id: "s3", date: "2026-08-15" }),
+    ],
+    pairing,
+    lift,
+  );
+  assert.equal(best.heaviestKg, 80);
+  assert.equal(best.heaviestReps, 9);
+  assert.equal(best.heaviestOn, "2026-08-08");
+});
+
+test("a lighter set with more reps does not displace a heavier one", () => {
+  const best = bestsForPairing(
+    [
+      session([set({ id: "a", reps: 3, weightKg: 100 })], { id: "s1", date: "2026-08-01" }),
+      session([set({ id: "b", reps: 20, weightKg: 40 })], { id: "s2", date: "2026-08-08" }),
+    ],
+    pairing,
+    lift,
+  );
+  assert.equal(best.heaviestKg, 100);
+  assert.equal(best.heaviestReps, 3);
+});
+
+test("a warm-up is never a personal best", () => {
+  const best = bestsForPairing(
+    [session([set({ id: "w", reps: 3, weightKg: 200, warmup: true })])],
+    pairing,
+    lift,
+  );
+  assert.equal(best.heaviestKg, null);
+  assert.equal(best.heaviestReps, null);
+  assert.equal(best.heaviestOn, null);
+});
+
+test("a timed exercise has no weight best to show", () => {
+  const best = bestsForPairing(
+    [session([set({ id: "r", exerciseId: "rower", durationSeconds: 900 })])],
+    { exerciseId: "rower", muscleGroupId: "chest" },
+    rower,
+  );
+  assert.equal(best.heaviestKg, null);
+});
