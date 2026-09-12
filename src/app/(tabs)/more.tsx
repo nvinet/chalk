@@ -87,6 +87,13 @@ export default function MoreScreen() {
               hint={<ThemedText type="link">{catalogue.muscleGroups} ›</ThemedText>}
             />
           </Pressable>
+          {/* Temporary, for #69. Delete with src/app/catalogue/drag-probe.tsx. */}
+          <Pressable onPress={() => router.push('/catalogue/drag-probe')} accessibilityRole="button">
+            <HintRow
+              title="Drag probe (temporary)"
+              hint={<ThemedText type="link">›</ThemedText>}
+            />
+          </Pressable>
           <Pressable onPress={() => router.push('/catalogue/exercises')} accessibilityRole="button">
             <HintRow
               title="Exercises"
