@@ -381,9 +381,14 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: MinTouchTarget,
     paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.one,
-    borderRadius: Spacing.two,
+    // The list's horizontal inset, pulled inside the row. It used to sit on
+    // the content container, which made the strip either side of every row
+    // look like part of it and behave like background — a touch there hit the
+    // list, not the item, so only the text and the glyph started a drag (#69).
+    marginHorizontal: -Spacing.four,
+    paddingHorizontal: Spacing.four,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   gripButton: {
