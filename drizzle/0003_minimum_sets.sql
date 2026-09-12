@@ -1,0 +1,1 @@
+ALTER TABLE `exercises` ADD `minimum_sets` integer DEFAULT 3 NOT NULL;

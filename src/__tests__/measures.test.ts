@@ -31,6 +31,7 @@ const lift: Exercise = {
   tracking: "weightReps",
   weightIncrementKg: 2.5,
   defaultRestSeconds: 90,
+  minimumSets: 3,
 };
 const rower: Exercise = { ...lift, id: "rower", name: "Rower", tracking: "duration" };
 const jog: Exercise = { ...lift, id: "jog", name: "Jogging", tracking: "distance" };
@@ -157,7 +158,10 @@ test("a warm-up cannot set a personal best", () => {
 test("a working set alongside a warm-up still counts", () => {
   const s = session([
     set({ id: "w", reps: 10, weightKg: 20, warmup: true }),
+    // Three working sets, because the warm-up contributes none of them (D23).
     set({ id: "x", setNumber: 2, reps: 8, weightKg: 80 }),
+    set({ id: "y", setNumber: 3, reps: 8, weightKg: 80 }),
+    set({ id: "z", setNumber: 4, reps: 8, weightKg: 80 }),
   ]);
   const outcome = evaluateSession(s, { exercises: [lift] });
   assert.equal(outcome.successful, true);

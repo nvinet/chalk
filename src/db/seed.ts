@@ -22,6 +22,8 @@
 import type { Catalogue } from "../domain/types.ts";
 
 const REST = 90;
+/** Working sets to complete a weight/reps exercise (D23). */
+const SETS = 3;
 const STEP = 2.5;
 
 export const seedCatalogue: Catalogue = {
@@ -192,6 +194,7 @@ function lift(
     tracking: "weightReps" as const,
     weightIncrementKg,
     defaultRestSeconds: REST,
+    minimumSets: SETS,
   };
 }
 
@@ -204,6 +207,9 @@ function timed(id: string, name: string) {
     tracking: "duration" as const,
     weightIncrementKg: 0,
     defaultRestSeconds: 0,
+    // Ignored while tracking is not weightReps, but left at the default so
+    // switching an exercise over later does not silently weaken the rule.
+    minimumSets: SETS,
   };
 }
 
@@ -216,5 +222,8 @@ function distance(id: string, name: string) {
     tracking: "distance" as const,
     weightIncrementKg: 0,
     defaultRestSeconds: 0,
+    // Ignored while tracking is not weightReps, but left at the default so
+    // switching an exercise over later does not silently weaken the rule.
+    minimumSets: SETS,
   };
 }

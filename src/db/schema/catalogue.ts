@@ -58,6 +58,12 @@ export const exercises = sqliteTable("exercises", {
   tracking: text("tracking").notNull().default("weightReps"),
   weightIncrementKg: real("weight_increment_kg").notNull().default(2.5),
   defaultRestSeconds: integer("default_rest_seconds").notNull().default(90),
+  /**
+   * Working sets before this exercise counts towards a group (D23).
+   * Read only for `weightReps`; timed and distance exercises count on one
+   * qualifying entry, so the column is stored but ignored for them.
+   */
+  minimumSets: integer("minimum_sets").notNull().default(3),
   notes: text("notes"),
   archived: integer("archived", { mode: "boolean" }).notNull().default(false),
 });

@@ -15,7 +15,12 @@ import {
   removeSet,
   useSession,
 } from '@/db/repository';
-import { evaluateSession } from '@/domain/completion';
+import {
+  evaluateSession,
+  indexById,
+  setsLoggedForGroup,
+  setsRequiredFor,
+} from '@/domain/completion';
 import {
   describeSet,
   fieldsForTracking,
@@ -103,6 +108,13 @@ export default function LogExerciseScreen() {
   );
   const outcome = evaluateSession(session, { exercises: context.allExercises });
   const group = outcome.groups.find((g) => g.muscleGroupId === groupId);
+
+  // This pairing's own progress. The group-level counts below are about
+  // exercises; standing at the machine, the question is how many more sets.
+  const setsHere =
+    setsLoggedForGroup(session, groupId, indexById(context.allExercises)).get(exercise.id) ?? 0;
+  const setsNeededHere = setsRequiredFor(exercise);
+  const setsLeftHere = Math.max(0, setsNeededHere - setsHere);
 
   // Reachable only by a hand-typed URL — W3 lists this session's own groups.
   // Worth refusing rather than rendering: a set logged against a group the
@@ -255,7 +267,9 @@ export default function LogExerciseScreen() {
           <ThemedText type="small" themeColor="textSecondary">
             {group.optional
               ? `${context.groupName} is optional — this never blocks the session`
-              : `${context.groupName} needs ${group.required} — ${group.loggedCount} logged`}
+              : setsLeftHere > 0
+                ? `${setsLeftHere} more ${setsLeftHere === 1 ? 'set' : 'sets'} and ${exercise.name} counts for ${context.groupName}`
+                : `${context.groupName} needs ${group.required} — ${group.loggedCount} logged`}
           </ThemedText>
           <Pressable
             onPress={() => router.dismissTo({ pathname: '/session/[id]', params: { id: session.id } })}

@@ -326,6 +326,7 @@ export interface ExerciseFields {
   tracking?: Exercise['tracking'];
   weightIncrementKg?: number;
   defaultRestSeconds?: number;
+  minimumSets?: number;
   notes?: string | null;
   aliases?: string[];
 }

@@ -333,7 +333,10 @@ function GroupRow({
         );
       })}
 
-      {!group.met && !group.optional && !group.skipped && group.loggedCount === 0 && (
+      {/* Sets, not exercises: since D23 a group can hold two sets and still
+          show a loggedCount of 0, and "nothing logged yet" would be a lie he
+          could disprove by scrolling. */}
+      {!group.met && !group.optional && !group.skipped && group.loggedSetCount === 0 && (
         <ThemedText type="small" themeColor="textSecondary">
           nothing logged yet
         </ThemedText>

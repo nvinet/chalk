@@ -180,15 +180,27 @@ export default function ExerciseScreen() {
 
           <Section title="defaults">
             {exercise.tracking === 'weightReps' && (
-              <Stepper
-                label="Weight step"
-                value={`${exercise.weightIncrementKg} kg`}
-                hint="What one tap of + or − adds during a set."
-                onChange={(by) => {
-                  const next = round(exercise.weightIncrementKg + by * 0.5);
-                  if (next >= 0.5) edit({ weightIncrementKg: next });
-                }}
-              />
+              <>
+                <Stepper
+                  label="Weight step"
+                  value={`${exercise.weightIncrementKg} kg`}
+                  hint="What one tap of + or − adds during a set."
+                  onChange={(by) => {
+                    const next = round(exercise.weightIncrementKg + by * 0.5);
+                    if (next >= 0.5) edit({ weightIncrementKg: next });
+                  }}
+                />
+                {/* Only for weight/reps: a run is not three runs (D23). */}
+                <Stepper
+                  label="Sets to complete"
+                  value={`${exercise.minimumSets} ${exercise.minimumSets === 1 ? 'set' : 'sets'}`}
+                  hint="Working sets before this counts towards a muscle group. Warm-ups are not among them."
+                  onChange={(by) => {
+                    const next = exercise.minimumSets + by;
+                    if (next >= 1) edit({ minimumSets: next });
+                  }}
+                />
+              </>
             )}
             <Stepper
               label="Rest"

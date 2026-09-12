@@ -12,6 +12,7 @@ function exercise(name: string, aliases: string[] = []): Exercise {
     tracking: "weightReps",
     weightIncrementKg: 2.5,
     defaultRestSeconds: 90,
+    minimumSets: 3,
   };
 }
 

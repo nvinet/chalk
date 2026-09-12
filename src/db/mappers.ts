@@ -71,6 +71,7 @@ export function toExercise(row: ExerciseRow): Exercise {
     tracking: toTrackingType(row.tracking),
     weightIncrementKg: row.weightIncrementKg,
     defaultRestSeconds: row.defaultRestSeconds,
+    minimumSets: row.minimumSets,
     notes: row.notes,
     archived: row.archived,
   };

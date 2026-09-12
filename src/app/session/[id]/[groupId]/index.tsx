@@ -15,7 +15,12 @@ import {
   skipExercise,
   useSession,
 } from '@/db/repository';
-import { evaluateSession } from '@/domain/completion';
+import {
+  evaluateSession,
+  indexById,
+  setsLoggedForGroup,
+  setsRequiredFor,
+} from '@/domain/completion';
 import { lastTimeForPairing } from '@/domain/scoring';
 import { skipReasonLabel, type Exercise, type Session, type SetEntry } from '@/domain/types';
 import { useTheme } from '@/hooks/use-theme';
@@ -59,6 +64,11 @@ export default function MuscleGroupScreen() {
   const outcome = evaluateSession(session, { exercises: data.allExercises });
   const group = outcome.groups.find((g) => g.muscleGroupId === groupId);
   const loggedHere = new Set(group?.exerciseIds ?? []);
+
+  // Sets, not exercises: an exercise part-way to its requirement is neither
+  // done nor untouched, and that state has to be visible from here or the
+  // only way to find out how far in he is would be to open the exercise (D23).
+  const setsHere = setsLoggedForGroup(session, groupId, indexById(data.allExercises));
 
   // Skipped sets for this group, so a card can say it was passed on rather
   // than looking simply untouched.
@@ -130,6 +140,8 @@ export default function MuscleGroupScreen() {
               groupName={data.name}
               history={data.history}
               logged={loggedHere.has(exercise.id)}
+              loggedSets={setsHere.get(exercise.id) ?? 0}
+              requiredSets={setsRequiredFor(exercise)}
               skippedSet={skippedHere.get(exercise.id) ?? null}
               onSkip={() =>
                 promptForSkipReason(`Skip ${exercise.name}?`, (reason) =>
@@ -179,6 +191,8 @@ function ExerciseCard({
   groupName,
   history,
   logged,
+  loggedSets,
+  requiredSets,
   skippedSet,
   onSkip,
   onLog,
@@ -188,6 +202,8 @@ function ExerciseCard({
   groupName: string;
   history: Session[];
   logged: boolean;
+  loggedSets: number;
+  requiredSets: number;
   skippedSet: SetEntry | null;
   onSkip: () => void;
   onLog: () => void;
@@ -213,6 +229,12 @@ function ExerciseCard({
         {skippedSet ? (
           <ThemedText type="small" style={{ color: colors.warning }}>
             Skipped — {skipReasonLabel(skippedSet.skipReason).toLowerCase()}
+          </ThemedText>
+        ) : loggedSets > 0 && !logged ? (
+          // Part-way through. How far in outranks what he did last time,
+          // which is only useful before the first set.
+          <ThemedText type="small" style={{ color: colors.accent }}>
+            {loggedSets} of {requiredSets} sets
           </ThemedText>
         ) : (
           <ThemedText type="small" themeColor="textSecondary">

@@ -80,6 +80,11 @@ export interface Exercise {
   /** Step size for the +/- controls. Ignored for timed exercises. */
   weightIncrementKg: number;
   defaultRestSeconds: number;
+  /**
+   * Working sets before this exercise counts towards a muscle group (D23).
+   * Meaningful only for `weightReps` — see `setsRequiredFor`.
+   */
+  minimumSets: number;
   notes?: string | null;
   archived?: boolean;
 }

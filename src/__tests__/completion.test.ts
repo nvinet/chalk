@@ -18,6 +18,8 @@ import {
   isSetLogged,
   exercisesLoggedForGroup,
   exercisesForMuscleGroup,
+  setsRequiredFor,
+  setsLoggedForGroup,
   outstandingGroups,
   requirementsForFamily,
   indexById,
@@ -39,6 +41,7 @@ const liftExercise: Exercise = {
   tracking: "weightReps",
   weightIncrementKg: 2.5,
   defaultRestSeconds: 90,
+  minimumSets: 3,
 };
 const timedExercise: Exercise = { ...liftExercise, id: "t", tracking: "duration" };
 
@@ -52,6 +55,29 @@ function set(partial: Partial<SetEntry>): SetEntry {
     skipped: false,
     ...partial,
   };
+}
+
+/**
+ * The three working sets it now takes to complete a weight/reps exercise
+ * (D23).
+ *
+ * Most tests below are about some *other* rule — distinctness, snapshots,
+ * skipping, optional groups — and only need an exercise to be done. One set
+ * used to say that; this says it now. Where the number of sets is itself the
+ * thing under test, the sets are still written out by hand.
+ */
+function completed(over: Partial<SetEntry> = {}, n = 3): SetEntry[] {
+  const exerciseId = over.exerciseId ?? "m";
+  const muscleGroupId = over.muscleGroupId ?? "g";
+  return Array.from({ length: n }, (_, i) =>
+    set({
+      reps: 10,
+      weightKg: 60,
+      ...over,
+      id: `${exerciseId}-${muscleGroupId}-${i + 1}`,
+      setNumber: i + 1,
+    }),
+  );
 }
 
 test("a set needs both reps and weight to count", () => {
@@ -97,6 +123,110 @@ function session(sets: SetEntry[], requirements: Session["requirements"]): Sessi
   };
 }
 
+// ---------------------------------------------------------------------------
+// Rule 1 — how many sets it takes (D23)
+// ---------------------------------------------------------------------------
+
+test("three working sets complete a weight/reps exercise; two do not", () => {
+  const group = (n: number) =>
+    evaluateMuscleGroup(
+      session(completed({}, n), []),
+      "g",
+      1,
+      indexById([liftExercise]),
+    );
+
+  assert.equal(group(2).met, false);
+  assert.equal(group(2).loggedCount, 0);
+  assert.equal(group(3).met, true);
+  assert.equal(group(3).loggedCount, 1);
+});
+
+test("loggedSetCount sees sets that loggedCount cannot", () => {
+  // Two of three: nothing complete, but emphatically not "nothing logged".
+  const outcome = evaluateMuscleGroup(
+    session(completed({}, 2), []),
+    "g",
+    1,
+    indexById([liftExercise]),
+  );
+  assert.equal(outcome.loggedCount, 0);
+  assert.equal(outcome.loggedSetCount, 2);
+  assert.equal(outcome.met, false);
+});
+
+test("a fourth set earns no second credit", () => {
+  const outcome = evaluateMuscleGroup(
+    session(completed({}, 4), []),
+    "g",
+    1,
+    indexById([liftExercise]),
+  );
+  assert.equal(outcome.loggedCount, 1);
+});
+
+test("the threshold is the exercise's own, not a constant", () => {
+  const single: Exercise = { ...liftExercise, id: "single", minimumSets: 1 };
+  assert.equal(setsRequiredFor(single), 1);
+  assert.equal(setsRequiredFor(liftExercise), 3);
+
+  const outcome = evaluateMuscleGroup(
+    session(completed({ exerciseId: "single" }, 1), []),
+    "g",
+    1,
+    indexById([single]),
+  );
+  assert.equal(outcome.met, true);
+});
+
+test("timed and distance exercises still count on one entry", () => {
+  assert.equal(setsRequiredFor(timedExercise), 1);
+  const distance: Exercise = { ...liftExercise, id: "d", tracking: "distance" };
+  assert.equal(setsRequiredFor(distance), 1);
+
+  // Even though the stored minimumSets says three — a run is not three runs.
+  assert.equal(timedExercise.minimumSets, 3);
+  const outcome = evaluateMuscleGroup(
+    session([set({ id: "1", exerciseId: "t", durationSeconds: 900 })], []),
+    "g",
+    1,
+    indexById([timedExercise]),
+  );
+  assert.equal(outcome.met, true);
+});
+
+test("a minimumSets of zero cannot complete an exercise with no sets", () => {
+  // A corrupt row must not hand out credit for nothing.
+  const broken: Exercise = { ...liftExercise, id: "broken", minimumSets: 0 };
+  assert.equal(setsRequiredFor(broken), 1);
+
+  const outcome = evaluateMuscleGroup(
+    session([], []),
+    "g",
+    1,
+    indexById([broken]),
+  );
+  assert.equal(outcome.met, false);
+});
+
+test("warm-ups contribute none of the three", () => {
+  const warmups = completed({ warmup: true }, 3);
+  const outcome = evaluateMuscleGroup(
+    session(warmups, []),
+    "g",
+    1,
+    indexById([liftExercise]),
+  );
+  assert.equal(outcome.met, false);
+
+  const counts = setsLoggedForGroup(
+    session([...warmups, ...completed({}, 3)], []),
+    "g",
+    indexById([liftExercise]),
+  );
+  assert.equal(counts.get("m"), 3);
+});
+
 test("several sets on one exercise count as one exercise", () => {
   const s = session(
     [
@@ -116,8 +246,8 @@ test("the same exercise logged for two groups counts once for each, not twice fo
   const hammerCurl = exercisesById.get("hammer-curl")!;
   const s = session(
     [
-      set({ id: "1", exerciseId: "hammer-curl", muscleGroupId: "biceps", reps: 10, weightKg: 50 }),
-      set({ id: "2", exerciseId: "hammer-curl", muscleGroupId: "forearms", reps: 10, weightKg: 40 }),
+      ...completed({ exerciseId: "hammer-curl", muscleGroupId: "biceps", weightKg: 50 }),
+      ...completed({ exerciseId: "hammer-curl", muscleGroupId: "forearms", weightKg: 40 }),
     ],
     [
       { muscleGroupId: "biceps", requiredExerciseCount: 1 },
@@ -146,7 +276,7 @@ test("the same exercise logged for two groups counts once for each, not twice fo
 test("chest requiring two exercises is not met by one", () => {
   const outcome = evaluateMuscleGroup(
     session(
-      [set({ id: "1", exerciseId: "pec-fly", muscleGroupId: "chest", reps: 10, weightKg: 75 })],
+      completed({ exerciseId: "pec-fly", muscleGroupId: "chest", weightKg: 75 }),
       [],
     ),
     "chest",
@@ -169,7 +299,7 @@ test("a required count of zero makes a group optional and never blocking", () =>
 
 test("optional groups are excluded from the met/total score", () => {
   const s = session(
-    [set({ id: "1", exerciseId: "pec-fly", muscleGroupId: "chest", reps: 10, weightKg: 75 })],
+    completed({ exerciseId: "pec-fly", muscleGroupId: "chest", weightKg: 75 }),
     [
       { muscleGroupId: "chest", requiredExerciseCount: 1 },
       { muscleGroupId: "forearms", requiredExerciseCount: 0 },
@@ -283,13 +413,13 @@ test("the model still allows an exercise to cross families", () => {
 test("exercisesLoggedForGroup counts distinct exercises, ignoring other groups", () => {
   const s = session(
     [
-      set({ id: "1", exerciseId: "pec-fly", muscleGroupId: "chest", reps: 10, weightKg: 40 }),
-      // Same exercise again — must not count twice.
-      set({ id: "2", exerciseId: "pec-fly", muscleGroupId: "chest", setNumber: 2, reps: 8, weightKg: 45 }),
-      set({ id: "3", exerciseId: "bench-press-flat", muscleGroupId: "chest", reps: 8, weightKg: 60 }),
+      // Three sets, one exercise — a fourth would still not count twice.
+      ...completed({ exerciseId: "pec-fly", muscleGroupId: "chest", weightKg: 40 }),
+      set({ id: "extra", exerciseId: "pec-fly", muscleGroupId: "chest", setNumber: 4, reps: 8, weightKg: 45 }),
+      ...completed({ exerciseId: "bench-press-flat", muscleGroupId: "chest", weightKg: 60 }),
       // A different group's work must not leak in.
-      set({ id: "4", exerciseId: "lateral-raise", muscleGroupId: "shoulders", reps: 12, weightKg: 8 }),
-      // Recorded but unusable, so not logged.
+      ...completed({ exerciseId: "lateral-raise", muscleGroupId: "shoulders", weightKg: 8 }),
+      // Recorded but unusable, so not logged however many there are.
       set({ id: "5", exerciseId: "shoulder-press", muscleGroupId: "chest", reps: null, weightKg: 30 }),
     ],
     [{ muscleGroupId: "chest", requiredExerciseCount: 2 }],
@@ -301,7 +431,7 @@ test("exercisesLoggedForGroup counts distinct exercises, ignoring other groups",
 
 test("outstandingGroups lists only what is still standing in the way", () => {
   const s = session(
-    [set({ id: "1", exerciseId: "pec-fly", muscleGroupId: "chest", reps: 10, weightKg: 40 })],
+    completed({ exerciseId: "pec-fly", muscleGroupId: "chest", weightKg: 40 }),
     [
       { muscleGroupId: "chest", requiredExerciseCount: 1 },
       { muscleGroupId: "shoulders", requiredExerciseCount: 1 },
@@ -329,7 +459,7 @@ test("a session is scored against its own snapshot, not the current family", () 
   // The session was started when chest needed one exercise. The family has
   // since been raised to two. The logged session must not change.
   const s = session(
-    [set({ id: "1", exerciseId: "pec-fly", muscleGroupId: "chest", reps: 10, weightKg: 40 })],
+    completed({ exerciseId: "pec-fly", muscleGroupId: "chest", weightKg: 40 }),
     [{ muscleGroupId: "chest", requiredExerciseCount: 1 }],
   );
 
@@ -422,7 +552,7 @@ test("a skipped group drops out of what is outstanding", () => {
 test("logging into a skipped group still counts it as met", () => {
   // Changing his mind should not need the skip undone first.
   const s = session(
-    [set({ id: "1", exerciseId: "pec-fly", muscleGroupId: "chest", reps: 10, weightKg: 40 })],
+    completed({ exerciseId: "pec-fly", muscleGroupId: "chest", weightKg: 40 }),
     [
       {
         muscleGroupId: "chest",
