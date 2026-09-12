@@ -18,8 +18,10 @@ import {
   formatKg,
   personalBestsInSession,
   sessionVolumeKg,
+  setsByPairing,
   type NewPersonalBest,
 } from '@/domain/scoring';
+import { describeSet } from '@/domain/measures';
 import { skipReasonLabel } from '@/domain/types';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -60,6 +62,8 @@ export default function SummaryScreen() {
         return exercise ? isSetLogged(s, exercise.tracking) : false;
       }).length,
       volumeKg: sessionVolumeKg(session, { exercises }),
+      // What he actually did, which until now the summary never said (#65).
+      logged: setsByPairing(session),
       bests: groupBests(
         personalBestsInSession(session, sessionsBefore(id), { exercises }),
         exercisesById,
@@ -79,7 +83,7 @@ export default function SummaryScreen() {
     );
   }
 
-  const { session, outcome, groupNames } = data;
+  const { session, outcome, groupNames, exercisesById } = data;
   const met = outcome.requiredGroupsMet;
   const total = outcome.requiredGroupsTotal;
 
@@ -165,6 +169,68 @@ export default function SummaryScreen() {
                   {best.text}
                 </ThemedText>
               ))}
+            </View>
+          )}
+
+          {/* What he actually did. The summary reported on the session
+              without ever saying what was in it, which meant a number he had
+              typed could not be read back — the reason for logging it (#65). */}
+          <ThemedText type="code" style={styles.heading}>
+            sets
+          </ThemedText>
+          {data.logged.length === 0 ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              Nothing was logged in this session.
+            </ThemedText>
+          ) : (
+            <View style={styles.logged}>
+              {data.logged.map((entry) => {
+                const exercise = exercisesById.get(entry.exerciseId);
+                const note = session.exerciseNotes?.find(
+                  (n) =>
+                    n.exerciseId === entry.exerciseId &&
+                    n.muscleGroupId === entry.muscleGroupId,
+                )?.note;
+
+                return (
+                  <View
+                    key={`${entry.exerciseId}-${entry.muscleGroupId}`}
+                    style={[styles.loggedGroup, { borderColor: colors.border }]}>
+                    <View style={styles.loggedHead}>
+                      <ThemedText type="smallBold">
+                        {exercise?.name ?? entry.exerciseId}
+                      </ThemedText>
+                      {/* The group it was credited to, not just the exercise:
+                          the same exercise can appear twice for two groups and
+                          neither use counts for the other (D4). */}
+                      <ThemedText type="small" themeColor="textSecondary">
+                        {groupNames.get(entry.muscleGroupId) ?? entry.muscleGroupId}
+                      </ThemedText>
+                    </View>
+
+                    {note ? (
+                      <ThemedText type="small" style={{ color: colors.accent }}>
+                        {note}
+                      </ThemedText>
+                    ) : null}
+
+                    {entry.sets.map((set, index) => (
+                      <View key={set.id} style={styles.loggedSet}>
+                        <ThemedText
+                          type="small"
+                          themeColor="textSecondary"
+                          style={styles.loggedSetNumber}>
+                          {index + 1}
+                        </ThemedText>
+                        <ThemedText type="small">
+                          {describeSet(set, exercise?.tracking ?? 'weightReps')}
+                          {set.warmup ? ' · warm-up' : ''}
+                        </ThemedText>
+                      </View>
+                    ))}
+                  </View>
+                );
+              })}
             </View>
           )}
 
@@ -324,6 +390,15 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   bests: { gap: Spacing.half },
+  logged: { gap: Spacing.three },
+  loggedGroup: {
+    gap: Spacing.one,
+    paddingVertical: Spacing.two,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  loggedHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  loggedSet: { flexDirection: 'row', gap: Spacing.three, alignItems: 'baseline' },
+  loggedSetNumber: { minWidth: 16 },
   notes: {
     minHeight: 96,
     padding: Spacing.three,

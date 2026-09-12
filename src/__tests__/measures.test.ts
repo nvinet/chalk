@@ -18,6 +18,7 @@ import {
   bestsForPairing,
   formatWeightReps,
   lastTimeForPairing,
+  setsByPairing,
   personalBestsInSession,
   setVolumeKg,
   topSetSeries,
@@ -310,4 +311,48 @@ test("formatWeightReps drops the reps when there are none", () => {
   assert.equal(formatWeightReps(60, 10), "60 kg × 10");
   assert.equal(formatWeightReps(60, null), "60 kg");
   assert.equal(formatWeightReps(60, 0), "60 kg");
+});
+
+// ------------------------------------------ the session's work, listed (#65)
+
+test("sets group by pairing, in the order each was first logged", () => {
+  const s = session([
+    set({ id: "1", exerciseId: "bench", muscleGroupId: "chest", reps: 8, weightKg: 80 }),
+    set({ id: "2", exerciseId: "fly", muscleGroupId: "chest", setNumber: 1, reps: 12, weightKg: 30 }),
+    set({ id: "3", exerciseId: "bench", muscleGroupId: "chest", setNumber: 2, reps: 6, weightKg: 80 }),
+  ]);
+
+  const groups = setsByPairing(s);
+  assert.equal(groups.length, 2);
+  // Bench first because it was logged first, and both its sets together.
+  assert.equal(groups[0]?.exerciseId, "bench");
+  assert.deepEqual(groups[0]?.sets.map((x) => x.id), ["1", "3"]);
+  assert.equal(groups[1]?.exerciseId, "fly");
+});
+
+test("the same exercise for two groups stays two entries", () => {
+  const s = session([
+    set({ id: "1", exerciseId: "hammer", muscleGroupId: "biceps", reps: 10, weightKg: 20 }),
+    set({ id: "2", exerciseId: "hammer", muscleGroupId: "forearms", setNumber: 1, reps: 10, weightKg: 20 }),
+  ]);
+
+  const groups = setsByPairing(s);
+  assert.equal(groups.length, 2);
+  assert.deepEqual(groups.map((g) => g.muscleGroupId), ["biceps", "forearms"]);
+});
+
+test("skip markers are not sets he did", () => {
+  const s = session([
+    set({ id: "1", exerciseId: "bench", muscleGroupId: "chest", skipped: true }),
+    set({ id: "2", exerciseId: "bench", muscleGroupId: "chest", setNumber: 1, reps: 8, weightKg: 80 }),
+  ]);
+  assert.deepEqual(setsByPairing(s)[0]?.sets.map((x) => x.id), ["2"]);
+});
+
+test("warm-ups are kept — they happened, even counting for nothing", () => {
+  const s = session([
+    set({ id: "w", exerciseId: "bench", muscleGroupId: "chest", reps: 10, weightKg: 20, warmup: true }),
+    set({ id: "x", exerciseId: "bench", muscleGroupId: "chest", setNumber: 2, reps: 8, weightKg: 80 }),
+  ]);
+  assert.deepEqual(setsByPairing(s)[0]?.sets.map((x) => x.id), ["w", "x"]);
 });

@@ -73,6 +73,19 @@ export function prefillValues(
   };
 }
 
+/**
+ * `82.5 kg × 8` — the one shape a weight/reps set is written in (#67).
+ *
+ * Lives here rather than in `scoring.ts` because the set table, the history
+ * and the personal best all need it, and the lowest of those is this file.
+ * Three screens wrote it independently once and produced two orderings of the
+ * same two numbers.
+ */
+export function formatWeightReps(weightKg: number, reps: number | null): string {
+  const load = `${trimDecimal(weightKg)} kg`;
+  return reps ? `${load} × ${reps}` : load;
+}
+
 /** One logged set, in the units it was recorded in. */
 export function describeSet(set: SetEntry, tracking: TrackingType): string {
   switch (tracking) {
@@ -81,7 +94,7 @@ export function describeSet(set: SetEntry, tracking: TrackingType): string {
     case "distance":
       return `${trimDecimal((set.distanceM ?? 0) / 1000)} km`;
     case "weightReps":
-      return `${set.reps ?? 0} × ${trimDecimal(set.weightKg ?? 0)} kg`;
+      return formatWeightReps(set.weightKg ?? 0, set.reps ?? 0);
   }
 }
 

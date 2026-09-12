@@ -125,15 +125,15 @@ test("stepping never goes below zero", () => {
 // ----------------------------------------------------------------- display
 
 test("a set reads in the units it was recorded in", () => {
-  assert.equal(describeSet(set({ reps: 10, weightKg: 75 }), "weightReps"), "10 × 75 kg");
+  assert.equal(describeSet(set({ reps: 10, weightKg: 75 }), "weightReps"), "75 kg × 10");
   assert.equal(describeSet(set({ durationSeconds: 1800 }), "duration"), "30 min");
   assert.equal(describeSet(set({ distanceM: 5000 }), "distance"), "5 km");
   assert.equal(describeSet(set({ distanceM: 7500 }), "distance"), "7.5 km");
 });
 
 test("a bodyweight set shows its real load, and 0 still shows", () => {
-  assert.equal(describeSet(set({ reps: 10, weightKg: 82.5 }), "weightReps"), "10 × 82.5 kg");
-  assert.equal(describeSet(set({ reps: 10, weightKg: 0 }), "weightReps"), "10 × 0 kg");
+  assert.equal(describeSet(set({ reps: 10, weightKg: 82.5 }), "weightReps"), "82.5 kg × 10");
+  assert.equal(describeSet(set({ reps: 10, weightKg: 0 }), "weightReps"), "0 kg × 10");
 });
 
 test("trailing zeroes are trimmed but real decimals are not", () => {

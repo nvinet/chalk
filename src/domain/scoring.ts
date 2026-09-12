@@ -8,8 +8,15 @@
  */
 
 import { indexById, isSetLogged } from "./completion.ts";
+import { formatWeightReps, trimDecimal } from "./measures.ts";
 import { isWeightBased } from "./types.ts";
 import type { Catalogue, Id, Exercise, Session, SetEntry } from "./types.ts";
+
+/**
+ * Re-exported so callers that already read formats from here keep working;
+ * the definition lives in `measures.ts`, which is lower down the stack.
+ */
+export { formatWeightReps };
 
 /** An exercise used for a specific muscle group. The unit of history. */
 export interface Pairing {
@@ -179,6 +186,48 @@ export function personalBestsInSession(
   return out;
 }
 
+export interface LoggedExercise {
+  exerciseId: Id;
+  muscleGroupId: Id;
+  sets: SetEntry[];
+}
+
+/**
+ * The session's work, grouped by pairing, in the order each was first logged
+ * (#65).
+ *
+ * Keyed on the pairing rather than the exercise alone, for the reason D4
+ * gives: the same exercise logged for two muscle groups is two separate pieces
+ * of work, and merging them would show a chest set under forearms.
+ *
+ * Skip markers are left out. A skipped exercise is not a set he did, and the
+ * reason is already reported against its muscle group.
+ *
+ * Warm-ups are kept. They count for nothing (D15) but they happened, and a
+ * history that hides them misrepresents the session — the caller marks them.
+ */
+export function setsByPairing(session: Session): LoggedExercise[] {
+  const order: string[] = [];
+  const groups = new Map<string, LoggedExercise>();
+
+  for (const set of session.sets) {
+    if (set.skipped) continue;
+    const key = pairingKey({ exerciseId: set.exerciseId, muscleGroupId: set.muscleGroupId });
+    let group = groups.get(key);
+    if (!group) {
+      group = { exerciseId: set.exerciseId, muscleGroupId: set.muscleGroupId, sets: [] };
+      groups.set(key, group);
+      order.push(key);
+    }
+    group.sets.push(set);
+  }
+
+  return order.flatMap((key) => {
+    const group = groups.get(key);
+    return group ? [group] : [];
+  });
+}
+
 export interface LastTime {
   date: string;
   sets: SetEntry[];
@@ -194,16 +243,6 @@ export interface LastTime {
    */
   topSetReps: number | null;
   measure: string;
-}
-
-/**
- * `82.5 kg × 8` — the one shape a weight/reps set is written in (#67).
- *
- * Both "last" and "best" go through this. They were written independently
- * once, and drifted into two orders of the same two numbers.
- */
-export function formatWeightReps(weightKg: number, reps: number | null): string {
-  return reps ? `${formatKg(weightKg)} × ${reps}` : formatKg(weightKg);
 }
 
 /**
@@ -294,8 +333,7 @@ export function formatKm(metres: number): string {
 }
 
 export function formatKg(kg: number): string {
-  const rounded = Math.round(kg * 10) / 10;
-  return `${Number.isInteger(rounded) ? rounded : rounded.toFixed(1)} kg`;
+  return `${trimDecimal(kg)} kg`;
 }
 
 /** Chart series for one pairing: heaviest set per session, oldest first. */
