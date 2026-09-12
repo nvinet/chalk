@@ -184,6 +184,26 @@ export interface LastTime {
   sets: SetEntry[];
   topSetWeightKg: number | null;
   summary: string;
+  /**
+   * Reps of the top set, and that set written the way a best is written.
+   *
+   * `summary` describes the whole visit — "3 sets @ 82.5 kg" — which is the
+   * right thing in a list of sessions. Beside a personal best it is the wrong
+   * thing, because the two lines then answer different questions in different
+   * orders and neither can be compared to the other at a glance (#67).
+   */
+  topSetReps: number | null;
+  measure: string;
+}
+
+/**
+ * `82.5 kg × 8` — the one shape a weight/reps set is written in (#67).
+ *
+ * Both "last" and "best" go through this. They were written independently
+ * once, and drifted into two orders of the same two numbers.
+ */
+export function formatWeightReps(weightKg: number, reps: number | null): string {
+  return reps ? `${formatKg(weightKg)} × ${reps}` : formatKg(weightKg);
 }
 
 /**
@@ -214,7 +234,9 @@ export function lastTimeForPairing(
       date: session.date,
       sets,
       topSetWeightKg: null,
+      topSetReps: null,
       summary: `${Math.round(seconds / 60)} min`,
+      measure: `${Math.round(seconds / 60)} min`,
     };
   }
 
@@ -224,18 +246,45 @@ export function lastTimeForPairing(
       date: session.date,
       sets,
       topSetWeightKg: null,
+      topSetReps: null,
       summary: formatKm(metres),
+      measure: formatKm(metres),
     };
   }
 
-  const topSetWeightKg = Math.max(...sets.map((s) => s.weightKg ?? 0));
+  // The top set by the same rule a personal best uses — heaviest, and at equal
+  // weight the one with more reps. "Last" and "best" then describe the same
+  // kind of thing, which is what makes them comparable side by side.
+  let topSet: SetEntry | null = null;
+  for (const candidate of sets) {
+    if (!topSet) {
+      topSet = candidate;
+      continue;
+    }
+    const w = candidate.weightKg ?? 0;
+    const best = topSet.weightKg ?? 0;
+    if (w > best || (w === best && (candidate.reps ?? 0) > (topSet.reps ?? 0))) {
+      topSet = candidate;
+    }
+  }
+
+  const topSetWeightKg = topSet?.weightKg ?? 0;
+  const topSetReps = topSet?.reps ?? null;
+
   const reps = sets[0]?.reps ?? 0;
   const uniformReps = sets.every((s) => (s.reps ?? 0) === reps);
   const summary = uniformReps
     ? `${sets.length}×${reps} @ ${formatKg(topSetWeightKg)}`
     : `${sets.length} sets @ ${formatKg(topSetWeightKg)}`;
 
-  return { date: session.date, sets, topSetWeightKg, summary };
+  return {
+    date: session.date,
+    sets,
+    topSetWeightKg,
+    topSetReps,
+    summary,
+    measure: formatWeightReps(topSetWeightKg, topSetReps),
+  };
 }
 
 /** Metres in, kilometres out — distance is stored canonically in metres (D12). */

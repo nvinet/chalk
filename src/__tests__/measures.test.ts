@@ -16,6 +16,7 @@ import {
 } from "../domain/completion.ts";
 import {
   bestsForPairing,
+  formatWeightReps,
   lastTimeForPairing,
   personalBestsInSession,
   setVolumeKg,
@@ -237,4 +238,76 @@ test("a timed exercise has no weight best to show", () => {
     rower,
   );
   assert.equal(best.heaviestKg, null);
+});
+
+// ------------------------------------- last and best read the same way (#67)
+
+test("last is written in the same shape as best", () => {
+  const history = [
+    session([set({ id: "a", reps: 8, weightKg: 82.5 })], { id: "s1", date: "2026-09-08" }),
+  ];
+
+  const last = lastTimeForPairing(history, pairing, lift);
+  const best = bestsForPairing(history, pairing, lift);
+
+  assert.equal(last?.measure, "82.5 kg × 8");
+  assert.equal(formatWeightReps(best.heaviestKg!, best.heaviestReps), "82.5 kg × 8");
+  // The same set, described identically by both — which is the point.
+  assert.equal(last?.measure, formatWeightReps(best.heaviestKg!, best.heaviestReps));
+});
+
+test("the measure is the top set, by the rule a best uses", () => {
+  const last = lastTimeForPairing(
+    [
+      session(
+        [
+          set({ id: "a", reps: 12, weightKg: 70 }),
+          set({ id: "b", setNumber: 2, reps: 6, weightKg: 82.5 }),
+          set({ id: "c", setNumber: 3, reps: 8, weightKg: 82.5 }),
+        ],
+        { id: "s1", date: "2026-09-08" },
+      ),
+    ],
+    pairing,
+    lift,
+  );
+
+  // Heaviest wins over more reps at a lighter load; at equal load, more reps.
+  assert.equal(last?.topSetWeightKg, 82.5);
+  assert.equal(last?.topSetReps, 8);
+  assert.equal(last?.measure, "82.5 kg × 8");
+});
+
+test("summary still describes the whole visit, for lists that want that", () => {
+  const last = lastTimeForPairing(
+    [
+      session(
+        [
+          set({ id: "a", reps: 8, weightKg: 82.5 }),
+          set({ id: "b", setNumber: 2, reps: 6, weightKg: 82.5 }),
+        ],
+        { id: "s1", date: "2026-09-08" },
+      ),
+    ],
+    pairing,
+    lift,
+  );
+  assert.equal(last?.measure, "82.5 kg × 8");
+  assert.match(last?.summary ?? "", /2 sets/);
+});
+
+test("timed and distance carry a measure too, with no reps to show", () => {
+  const timed = lastTimeForPairing(
+    [session([set({ id: "r", exerciseId: "rower", durationSeconds: 900 })])],
+    { exerciseId: "rower", muscleGroupId: "chest" },
+    rower,
+  );
+  assert.equal(timed?.measure, "15 min");
+  assert.equal(timed?.topSetReps, null);
+});
+
+test("formatWeightReps drops the reps when there are none", () => {
+  assert.equal(formatWeightReps(60, 10), "60 kg × 10");
+  assert.equal(formatWeightReps(60, null), "60 kg");
+  assert.equal(formatWeightReps(60, 0), "60 kg");
 });

@@ -34,7 +34,7 @@ import {
 } from '@/domain/measures';
 import { checkMeasures, referenceValues } from '@/domain/plausibility';
 import { isFinished, remainingSeconds, restProgress } from '@/domain/rest';
-import { bestsForPairing, formatKg, lastTimeForPairing } from '@/domain/scoring';
+import { bestsForPairing, formatWeightReps, lastTimeForPairing } from '@/domain/scoring';
 import { useRestTimer } from '@/hooks/use-rest-timer';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -187,18 +187,19 @@ export default function LogExerciseScreen() {
 
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <ThemedView type="backgroundElement" style={styles.lastTime}>
-            <ThemedText type="code">last time · {context.groupName.toLowerCase()}</ThemedText>
+            {/* Two lines of the same shape — `label · measure · date` — so
+                what he did and what he is chasing can be compared without
+                reading them. They were written independently and ended up as
+                two orders of the same two numbers (#67). */}
+            <ThemedText type="code">{context.groupName.toLowerCase()}</ThemedText>
             <ThemedText type="small">
-              {last ? `${last.date} · ${last.summary}` : 'not used for this group yet'}
+              {last ? `last · ${last.measure} · ${last.date}` : 'last · not used for this group yet'}
             </ThemedText>
-            {/* One line, not a second panel: this sits above the steppers on
-                the screen N4 protects, and a target he cannot see while
-                choosing the load is no target at all (#67). */}
             {best?.heaviestKg != null && (
               <ThemedText type="small" themeColor="textSecondary">
-                best · {formatKg(best.heaviestKg)}
-                {best.heaviestReps ? ` × ${best.heaviestReps}` : ''}
-                {best.heaviestOn ? ` · ${best.heaviestOn}` : ''}
+                {`best · ${formatWeightReps(best.heaviestKg, best.heaviestReps)}${
+                  best.heaviestOn ? ` · ${best.heaviestOn}` : ''
+                }`}
               </ThemedText>
             )}
           </ThemedView>
