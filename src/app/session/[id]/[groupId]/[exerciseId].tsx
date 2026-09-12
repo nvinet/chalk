@@ -182,6 +182,18 @@ export default function LogExerciseScreen() {
             </ThemedText>
           </ThemedView>
 
+          {/* The note is written in the catalogue editor and read here (#66).
+              Seat height and bench angle are only worth recording if they are
+              in front of him at the machine; a note nobody sees while standing
+              there has failed. Absent for most exercises, so it renders only
+              when there is something to say. */}
+          {exercise.notes?.trim() ? (
+            <ThemedView type="backgroundElement" style={styles.lastTime}>
+              <ThemedText type="code">setup</ThemedText>
+              <ThemedText type="small">{exercise.notes.trim()}</ThemedText>
+            </ThemedView>
+          ) : null}
+
           {sets.length > 0 && (
             <View style={styles.table}>
               <View style={styles.row}>
