@@ -382,7 +382,8 @@ refusal costs only the notification. The on-screen countdown is the feature.
 
 | | Question | Blocks |
 |---|---|---|
-| **Q27** | Required machine count for each group in each family. Default is 1; forearms currently 0. | Seed values; the meaning of a successful session |
+| **Q31** | Can a session span families, and what does completion mean then? | Today (#32); session screen (#20); scheduling (#33) |
+| **Q27** | Required exercise count for each group in each family, **and the minimum sets before an exercise counts at all**. Default is 1; forearms currently 0; sets currently 1 by omission. | Seed values; the meaning of a successful session |
 | **Q11** | Body weight / measurements — wanted at all? | Deliberately out of v1 |
 
 ---
