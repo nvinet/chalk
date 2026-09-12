@@ -6,6 +6,7 @@ import m0001 from './0001_one_session_in_progress.sql';
 import m0002 from './0002_skip_a_muscle_group.sql';
 import m0003 from './0003_minimum_sets.sql';
 import m0004 from './0004_session_exercise_notes.sql';
+import m0005 from './0005_drop_exercise_notes.sql';
 
   export default {
     journal,
@@ -14,7 +15,8 @@ import m0004 from './0004_session_exercise_notes.sql';
 m0001,
 m0002,
 m0003,
-m0004
+m0004,
+m0005
     }
   }
   

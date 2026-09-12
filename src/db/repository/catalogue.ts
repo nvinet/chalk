@@ -327,7 +327,6 @@ export interface ExerciseFields {
   weightIncrementKg?: number;
   defaultRestSeconds?: number;
   minimumSets?: number;
-  notes?: string | null;
   aliases?: string[];
 }
 

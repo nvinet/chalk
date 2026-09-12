@@ -26,7 +26,6 @@ const exerciseRow: ExerciseRow = {
   weightIncrementKg: 2.5,
   defaultRestSeconds: 90,
   minimumSets: 3,
-  notes: null,
   archived: false,
 };
 

@@ -64,7 +64,6 @@ export const exercises = sqliteTable("exercises", {
    * qualifying entry, so the column is stored but ignored for them.
    */
   minimumSets: integer("minimum_sets").notNull().default(3),
-  notes: text("notes"),
   archived: integer("archived", { mode: "boolean" }).notNull().default(false),
 });
 

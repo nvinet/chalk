@@ -85,7 +85,6 @@ export interface Exercise {
    * Meaningful only for `weightReps` — see `setsRequiredFor`.
    */
   minimumSets: number;
-  notes?: string | null;
   archived?: boolean;
 }
 

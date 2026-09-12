@@ -82,7 +82,7 @@ export function applyCatalogueSeed(catalogue: Catalogue = seedCatalogue): void {
             tracking: e.tracking,
             weightIncrementKg: e.weightIncrementKg,
             defaultRestSeconds: e.defaultRestSeconds,
-            notes: e.notes ?? null,
+            minimumSets: e.minimumSets,
             archived: e.archived ?? false,
           })),
         )

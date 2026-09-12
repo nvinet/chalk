@@ -248,15 +248,6 @@ export default function ExerciseScreen() {
             )}
           </Section>
 
-          <Section title="notes">
-            <NotesField
-              initial={exercise.notes ?? ''}
-              onCommit={(notes) => {
-                if (notes !== (exercise.notes ?? '')) edit({ notes: notes === '' ? null : notes });
-              }}
-            />
-          </Section>
-
           {exercise.aliases.length > 0 && (
             <ThemedText type="small" themeColor="textSecondary">
               Also found by searching for {exercise.aliases.join(', ')}.
@@ -295,30 +286,6 @@ function NameField({
       onSubmitEditing={() => onCommit(text.trim())}
       accessibilityLabel="Exercise name"
       style={[styles.name, { color: colors.text, borderColor: colors.border }]}
-    />
-  );
-}
-
-function NotesField({
-  initial,
-  onCommit,
-}: {
-  initial: string;
-  onCommit: (notes: string) => void;
-}) {
-  const colors = useTheme();
-  const [text, setText] = useState(initial);
-
-  return (
-    <TextInput
-      value={text}
-      onChangeText={setText}
-      onBlur={() => onCommit(text.trim())}
-      multiline
-      placeholder="Seat height, grip, anything worth remembering next time"
-      placeholderTextColor={colors.textSecondary}
-      accessibilityLabel="Notes"
-      style={[styles.notes, { color: colors.text, borderColor: colors.border }]}
     />
   );
 }
@@ -425,13 +392,6 @@ const styles = StyleSheet.create({
     minWidth: 40,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  notes: {
-    minHeight: 88,
-    padding: Spacing.three,
-    borderRadius: Spacing.three,
-    borderWidth: StyleSheet.hairlineWidth,
-    textAlignVertical: 'top',
   },
   removeButton: { minHeight: MinTouchTarget, justifyContent: 'center', paddingTop: Spacing.three },
 });

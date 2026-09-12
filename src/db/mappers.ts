@@ -73,7 +73,6 @@ export function toExercise(row: ExerciseRow): Exercise {
     weightIncrementKg: row.weightIncrementKg,
     defaultRestSeconds: row.defaultRestSeconds,
     minimumSets: row.minimumSets,
-    notes: row.notes,
     archived: row.archived,
   };
 }
