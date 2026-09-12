@@ -1,6 +1,12 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  runOnJS,
+} from 'react-native-reanimated';
 import ReorderableList, {
   reorderItems,
   useReorderableDrag,
@@ -50,7 +56,17 @@ export default function DragProbeScreen() {
           <ThemedText type="link">‹ More</ThemedText>
         </Pressable>
         <ThemedText type="small" themeColor="textSecondary" style={styles.status}>
-          {log} — hold a card, then drag
+          1. drag the square. 2. hold a card and drag it.
+        </ThemedText>
+
+        {/* Layer test: bare gesture-handler driving a bare Reanimated style.
+            No library involved. If the square does not move, the fault is
+            below the reorderable list and nothing about it can be fixed by
+            changing lists. */}
+        <RawGestureProbe />
+
+        <ThemedText type="small" themeColor="textSecondary" style={styles.status}>
+          list: {log}
         </ThemedText>
 
         <ReorderableList
@@ -61,6 +77,35 @@ export default function DragProbeScreen() {
         />
       </SafeAreaView>
     </ThemedView>
+  );
+}
+
+function RawGestureProbe() {
+  const x = useSharedValue(0);
+  const [moved, setMoved] = useState('square: not moved');
+
+  const pan = Gesture.Pan()
+    .onUpdate((e) => {
+      'worklet';
+      x.value = e.translationX;
+    })
+    .onEnd(() => {
+      'worklet';
+      runOnJS(setMoved)('square: MOVED — gesture handler and reanimated work');
+      x.value = 0;
+    });
+
+  const style = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
+
+  return (
+    <>
+      <GestureDetector gesture={pan}>
+        <Animated.View style={[styles.square, style]} />
+      </GestureDetector>
+      <ThemedText type="small" themeColor="textSecondary" style={styles.status}>
+        {moved}
+      </ThemedText>
+    </>
   );
 }
 
@@ -87,4 +132,5 @@ const styles = StyleSheet.create({
     borderBottomColor: '#dddddd',
   },
   text: { fontSize: 20, color: '#111111' },
+  square: { width: 64, height: 64, borderRadius: 8, backgroundColor: '#208AEF', marginLeft: 16 },
 });
