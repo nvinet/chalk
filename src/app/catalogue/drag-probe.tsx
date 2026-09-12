@@ -1,17 +1,13 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  runOnJS,
-} from 'react-native-reanimated';
-import ReorderableList, {
-  reorderItems,
-  useReorderableDrag,
-  type ReorderableListReorderEvent,
-} from 'react-native-reorderable-list';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import {
+  Sortable,
+  SortableItem,
+  type SortableRenderItemProps,
+} from 'react-native-reanimated-dnd';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -20,34 +16,45 @@ import { ThemedView } from '@/components/themed-view';
 /**
  * TEMPORARY SCAFFOLDING (#69). Delete once dragging is confirmed working.
  *
- * The library's own README example, copied as literally as possible: plain
- * `View`s and `Text`, no theme, no database, no nesting, no custom gesture, no
- * styling of ours anywhere. Nothing in it is Chalk's.
+ * The square is the control, and it already passed: a bare `Gesture.Pan`
+ * writing a shared value into a bare `useAnimatedStyle` moves, which proves
+ * gesture-handler and the Reanimated runtime both work here.
  *
- * It exists to answer one question that three rounds of guessing could not:
- * **does dragging work at all in this app?**
+ * The cards below are now `react-native-reanimated-dnd`, whose peer range
+ * requires Reanimated >= 4.2. The library they replace asked for >= 3.12 with
+ * no upper bound and is the newest version its author published — it simply
+ * predates Reanimated 4, and its own README example did not drag in this app
+ * either.
  *
- *  - If these cards drag, the library and the environment are fine and the
- *    fault is somewhere in the catalogue screens — which narrows it to code I
- *    can read.
- *  - If they do not, nothing in the catalogue screens was ever the cause, and
- *    the problem is the library against Reanimated 4 or something about this
- *    app's setup.
- *
- * Delete this file, its `Stack.Screen`, and the row in More that reaches it.
+ * Everything else was ruled out first: the worklet babel transform runs on our
+ * code *and* on the library's compiled output, the Reanimated/RN/worklets
+ * versions are a supported combination, and `GestureHandlerRootView` is
+ * mounted.
  */
 const seed = Array(12)
   .fill(null)
   .map((_, i) => ({ id: String(i), label: `Card ${i}` }));
 
+type Item = (typeof seed)[number];
+
 export default function DragProbeScreen() {
-  const [data, setData] = useState(seed);
   const [log, setLog] = useState('no reorder yet');
 
-  const handleReorder = ({ from, to }: ReorderableListReorderEvent) => {
-    setData((value) => reorderItems(value, from, to));
-    setLog(`reordered ${from} → ${to}`);
-  };
+  const renderItem = useCallback((props: SortableRenderItemProps<Item>) => {
+    const { item, id, ...rest } = props;
+    return (
+      <SortableItem
+        key={id}
+        id={id}
+        data={item}
+        {...rest}
+        onDrop={(droppedId, position) => setLog(`dropped ${droppedId} at ${position}`)}>
+        <View style={styles.card}>
+          <Text style={styles.text}>{item.label}</Text>
+        </View>
+      </SortableItem>
+    );
+  }, []);
 
   return (
     <ThemedView style={styles.container}>
@@ -55,31 +62,20 @@ export default function DragProbeScreen() {
         <Pressable onPress={() => router.back()} style={styles.back} accessibilityRole="button">
           <ThemedText type="link">‹ More</ThemedText>
         </Pressable>
-        <ThemedText type="small" themeColor="textSecondary" style={styles.status}>
-          1. drag the square. 2. hold a card and drag it.
-        </ThemedText>
 
-        {/* Layer test: bare gesture-handler driving a bare Reanimated style.
-            No library involved. If the square does not move, the fault is
-            below the reorderable list and nothing about it can be fixed by
-            changing lists. */}
         <RawGestureProbe />
 
         <ThemedText type="small" themeColor="textSecondary" style={styles.status}>
-          list: {log}
+          list: {log} — hold a card, then drag
         </ThemedText>
 
-        <ReorderableList
-          data={data}
-          onReorder={handleReorder}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <Card label={item.label} />}
-        />
+        <Sortable data={seed} renderItem={renderItem} itemHeight={60} />
       </SafeAreaView>
     </ThemedView>
   );
 }
 
+/** The control. Bare gesture-handler, bare Reanimated, no library. */
 function RawGestureProbe() {
   const x = useSharedValue(0);
   const [moved, setMoved] = useState('square: not moved');
@@ -106,15 +102,6 @@ function RawGestureProbe() {
         {moved}
       </ThemedText>
     </>
-  );
-}
-
-function Card({ label }: { label: string }) {
-  const drag = useReorderableDrag();
-  return (
-    <Pressable style={styles.card} onLongPress={drag}>
-      <Text style={styles.text}>{label}</Text>
-    </Pressable>
   );
 }
 
