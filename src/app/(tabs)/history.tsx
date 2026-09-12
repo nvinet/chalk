@@ -41,8 +41,17 @@ export default function HistoryScreen() {
   // Collapsed by default: the list answers the everyday question, and a month
   // grid is a lot of screen for something glanced at occasionally.
   const [showCalendar, setShowCalendar] = useState(false);
+  // Off by default (#64). An abandoned session is one he walked away from, and
+  // listing it beside real ones makes the history a record of intentions.
+  const [showAbandoned, setShowAbandoned] = useState(false);
 
   const visible = familyId ? sessions.filter((s) => s.familyId === familyId) : sessions;
+
+  // Hidden, never dropped. The sets logged before a session was abandoned are
+  // real, and `counts()` in planning.ts already keeps such a session out of
+  // adherence — so this is a display filter and nothing more.
+  const abandoned = visible.filter((s) => s.status === 'abandoned');
+  const listed = showAbandoned ? visible : visible.filter((s) => s.status !== 'abandoned');
 
   // Judged once, here: the list and the calendar must not disagree about
   // whether a session counted.
@@ -167,13 +176,27 @@ export default function HistoryScreen() {
             </Pressable>
           </View>
 
-          {visible.length === 0 && (
+          {/* Said out loud rather than silently omitted: rows are missing from
+              this list, and the sets inside them were really logged (#64). */}
+          {abandoned.length > 0 && (
+            <Pressable
+              onPress={() => setShowAbandoned((shown) => !shown)}
+              accessibilityRole="button"
+              style={styles.abandonedToggle}>
+              <ThemedText type="small" themeColor="textSecondary">
+                {abandoned.length} abandoned {abandoned.length === 1 ? 'session' : 'sessions'}{' '}
+                {showAbandoned ? 'shown · hide' : 'hidden · show'}
+              </ThemedText>
+            </Pressable>
+          )}
+
+          {listed.length === 0 && (
             <ThemedText type="small" themeColor="textSecondary">
               Nothing logged yet.
             </ThemedText>
           )}
 
-          {visible.map((session) => {
+          {listed.map((session) => {
             const verdict = verdicts.get(session.id);
             return (
               <Pressable
@@ -296,6 +319,7 @@ function familyLabel(familyId: string): string {
 }
 
 const styles = StyleSheet.create({
+  abandonedToggle: { minHeight: MinTouchTarget, justifyContent: 'center' },
   container: { flex: 1, flexDirection: 'row', justifyContent: 'center' },
   safeArea: { flex: 1, width: '100%', maxWidth: MaxContentWidth },
   scroll: {
