@@ -84,7 +84,7 @@ export default function MuscleGroupsScreen() {
         <ScrollViewContainer
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled">
-          <ThemedText type="small" themeColor="textSecondary">
+          <ThemedText type="small" themeColor="textSecondary" style={styles.gutter}>
             Hold a group to drag it into the order it is trained in. The number is how
             many distinct exercises that group needs before the family counts it as done.
             Changing either never alters a session already logged.
@@ -374,20 +374,28 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.three,
   },
   headerButton: { minHeight: MinTouchTarget, minWidth: 80, justifyContent: 'center' },
-  scroll: { paddingHorizontal: Spacing.four, paddingBottom: Spacing.five, gap: Spacing.four },
+  // No horizontal padding here: it belongs on each child, so that the rows
+  // can reach the screen edge and stay touchable the whole way (#69).
+  scroll: { paddingBottom: Spacing.five, gap: Spacing.four },
+  gutter: { paddingHorizontal: Spacing.four },
   section: { gap: Spacing.one },
-  sectionHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  sectionHead: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.four,
+  },
   heading: { textTransform: 'uppercase' },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: MinTouchTarget,
     paddingVertical: Spacing.two,
-    // The list's horizontal inset, pulled inside the row. It used to sit on
-    // the content container, which made the strip either side of every row
-    // look like part of it and behave like background — a touch there hit the
-    // list, not the item, so only the text and the glyph started a drag (#69).
-    marginHorizontal: -Spacing.four,
+    // The gutter lives on the row, not on the content container, so the strip
+    // either side of the label is part of the touch target (#69). A negative
+    // margin was tried instead and broke dragging outright: it puts the row
+    // outside its parent's box, where touches are not reliably delivered and
+    // the list measures a cell wider than itself.
     paddingHorizontal: Spacing.four,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
@@ -406,8 +414,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  addRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  addButton: { minHeight: MinTouchTarget, justifyContent: 'center' },
+  addRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.four,
+  },
+  addButton: {
+    minHeight: MinTouchTarget,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.four,
+  },
   input: {
     flex: 1,
     minHeight: MinTouchTarget,
@@ -415,5 +432,5 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.three,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  note: { paddingTop: Spacing.three },
+  note: { paddingTop: Spacing.three, paddingHorizontal: Spacing.four },
 });

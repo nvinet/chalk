@@ -136,19 +136,19 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.three,
   },
   headerButton: { minHeight: MinTouchTarget, minWidth: 80, justifyContent: 'center' },
-  scroll: { paddingHorizontal: Spacing.four, paddingBottom: Spacing.five },
-  intro: { paddingBottom: Spacing.three },
+  scroll: { paddingBottom: Spacing.five },
+  intro: { paddingBottom: Spacing.three, paddingHorizontal: Spacing.four },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
     minHeight: MinTouchTarget,
     paddingVertical: Spacing.three,
-    // The list's horizontal inset, pulled inside the row. It used to sit on
-    // the content container, which made the strip either side of every row
-    // look like part of it and behave like background — a touch there hit the
-    // list, not the item, so only the text and the glyph started a drag (#69).
-    marginHorizontal: -Spacing.four,
+    // The gutter lives on the row, not on the content container, so the strip
+    // either side of the label is part of the touch target (#69). A negative
+    // margin was tried instead and broke dragging outright: it puts the row
+    // outside its parent's box, where touches are not reliably delivered and
+    // the list measures a cell wider than itself.
     paddingHorizontal: Spacing.four,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
