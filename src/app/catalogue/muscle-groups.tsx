@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Gesture } from 'react-native-gesture-handler';
 import {
   NestedReorderableList,
   ScrollViewContainer,
@@ -51,6 +52,9 @@ import { useTheme } from '@/hooks/use-theme';
  * The implicit cardio group is never shown. It exists so a single completion
  * rule covers every family, and it is not his to edit.
  */
+/** How long a press must be held before it becomes a drag rather than a tap. */
+const DRAG_AFTER_MS = 200;
+
 export default function MuscleGroupsScreen() {
   // Live: creating, renaming or archiving a group re-reads this, which is what
   // refreshes the sections below.
@@ -141,6 +145,12 @@ function FamilySection({
 }) {
   const colors = useTheme();
 
+  // The drag has to win against the page scroll this list is nested inside —
+  // the harder case, since the container scrolls in the same axis the drag
+  // moves. Requiring a long press first is the library's own answer, and the
+  // threshold sits just above the Pressable's `delayLongPress`.
+  const panGesture = useMemo(() => Gesture.Pan().activateAfterLongPress(DRAG_AFTER_MS + 20), []);
+
   // Writes to `family_muscle_groups` — a drag, or a required count — do not
   // touch the `muscle_groups` table the live query watches, so they bump this
   // instead. Derived rather than held in an effect: the database stays the
@@ -208,6 +218,9 @@ function FamilySection({
         data={rows}
         keyExtractor={(row) => row.group.id}
         scrollable={false}
+        panGesture={panGesture}
+        // Required for `useIsActive` in the row to ever report true.
+        shouldUpdateActiveItem
         onReorder={({ from, to }) => {
           const next = reorderItems(rows, from, to);
           reorderFamilyMuscleGroups(family.id, next.map((r) => r.group.id));
@@ -282,7 +295,7 @@ function GroupRow({
       ]}>
       <Pressable
         onLongPress={drag}
-        delayLongPress={200}
+        delayLongPress={DRAG_AFTER_MS}
         accessibilityRole="button"
         accessibilityLabel={`Hold to reorder ${group.name}`}
         style={styles.gripButton}>
