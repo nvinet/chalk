@@ -15,6 +15,7 @@ import {
   recentSessionsForMuscleGroup,
   sessionsForPairing,
   removeSet,
+  setSessionExerciseNote,
   useSession,
 } from '@/db/repository';
 import {
@@ -87,6 +88,16 @@ export default function LogExerciseScreen() {
   const best = exercise
     ? bestsForPairing(context.pairingHistory, { exerciseId, muscleGroupId: groupId }, exercise)
     : null;
+
+  // Saved as it is typed, like the sets and like the session note: the app
+  // being killed mid-session must never be why something written down is gone
+  // (N7). Held locally as well so the field does not fight the live query.
+  const [note, setNote] = useState(
+    () =>
+      session?.exerciseNotes?.find(
+        (n) => n.exerciseId === exerciseId && n.muscleGroupId === groupId,
+      )?.note ?? '',
+  );
 
   const [draft, setDraft] = useState<MeasureValues | null>(null);
   // Dismissals are keyed by the value they were shown for, so correcting the
@@ -204,17 +215,22 @@ export default function LogExerciseScreen() {
             )}
           </ThemedView>
 
-          {/* The note is written in the catalogue editor and read here (#66).
-              Seat height and bench angle are only worth recording if they are
-              in front of him at the machine; a note nobody sees while standing
-              there has failed. Absent for most exercises, so it renders only
-              when there is something to say. */}
-          {exercise.notes?.trim() ? (
-            <ThemedView type="backgroundElement" style={styles.lastTime}>
-              <ThemedText type="code">setup</ThemedText>
-              <ThemedText type="small">{exercise.notes.trim()}</ThemedText>
-            </ThemedView>
-          ) : null}
+          {/* This session's note for this exercise (#66) — what he set the
+              machine to today, not a permanent property of the machine.
+              Write-only here: past notes are read in the history (#65), so
+              nothing extra sits above the steppers that N4 protects. */}
+          <TextInput
+            value={note}
+            onChangeText={(text) => {
+              setNote(text);
+              setSessionExerciseNote(id, exerciseId, groupId, text);
+            }}
+            placeholder="Note for today — seat height, bench angle"
+            placeholderTextColor={colors.textSecondary}
+            multiline
+            accessibilityLabel={`Note for ${exercise.name} today`}
+            style={[styles.note, { color: colors.text, borderColor: colors.border }]}
+          />
 
           {sets.length > 0 && (
             <View style={styles.table}>
@@ -400,6 +416,13 @@ const styles = StyleSheet.create({
   colValue: { flex: 1 },
   colAction: { minHeight: MinTouchTarget, minWidth: 72, justifyContent: 'center' },
   field: { gap: Spacing.two },
+  note: {
+    minHeight: MinTouchTarget,
+    padding: Spacing.three,
+    borderRadius: Spacing.three,
+    borderWidth: StyleSheet.hairlineWidth,
+    textAlignVertical: 'top',
+  },
   warning: {
     flexDirection: 'row',
     alignItems: 'center',

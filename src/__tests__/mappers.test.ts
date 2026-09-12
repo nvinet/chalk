@@ -9,8 +9,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { toFamily, toExercise, toMuscleGroup, toTrackingType } from "../db/mappers.ts";
-import type { FamilyRow, ExerciseRow, MuscleGroupRow } from "../db/schema.ts";
+import {
+  toFamily,
+  toExercise,
+  toMuscleGroup,
+  toTrackingType,
+  toSession,
+} from "../db/mappers.ts";
+import type { FamilyRow, ExerciseRow, MuscleGroupRow, SessionRow } from "../db/schema.ts";
 
 const exerciseRow: ExerciseRow = {
   id: "hammer-curl",
@@ -73,4 +79,39 @@ test("an implicit muscle group keeps its flag through the mapping", () => {
 
 test("an exercise with no aliases maps to an empty list, not undefined", () => {
   assert.deepEqual(toExercise({ ...exerciseRow, aliases: [] }).aliases, []);
+});
+
+// -------------------------------------------- the session's own notes (#66)
+
+const sessionRow: SessionRow = {
+  id: "s1",
+  familyId: "push",
+  date: "2026-09-12",
+  startedAt: "2026-09-12T18:00:00Z",
+  finishedAt: null,
+  status: "inProgress",
+  notes: null,
+};
+
+test("a session carries its per-exercise notes", () => {
+  const session = toSession(sessionRow, [], [], [
+    { exerciseId: "bench-press-flat", muscleGroupId: "chest", note: "bench at 30" },
+  ]);
+  assert.equal(session.exerciseNotes?.length, 1);
+  assert.equal(session.exerciseNotes?.[0]?.note, "bench at 30");
+  // Keyed on the pairing, like a set: the same exercise for another group is
+  // separate work and gets its own note.
+  assert.equal(session.exerciseNotes?.[0]?.muscleGroupId, "chest");
+});
+
+test("a session with no notes maps to an empty list, not undefined", () => {
+  assert.deepEqual(toSession(sessionRow, [], []).exerciseNotes, []);
+});
+
+test("the session note and the per-exercise notes are different things", () => {
+  const session = toSession({ ...sessionRow, notes: "felt strong" }, [], [], [
+    { exerciseId: "bench-press-flat", muscleGroupId: "chest", note: "bench at 30" },
+  ]);
+  assert.equal(session.notes, "felt strong");
+  assert.equal(session.exerciseNotes?.[0]?.note, "bench at 30");
 });

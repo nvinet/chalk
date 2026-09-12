@@ -53,6 +53,19 @@ export interface SessionRequirement {
   skipReason?: SkipReason | null;
 }
 
+/**
+ * What he set the machine to, for one exercise, on one day (#66).
+ *
+ * Belongs to the session rather than to the exercise: a bench angle is a fact
+ * about that session's work, and editing the catalogue must not retrospectively
+ * change what August appears to have done.
+ */
+export interface SessionExerciseNote {
+  exerciseId: Id;
+  muscleGroupId: Id;
+  note: string;
+}
+
 export interface Session {
   id: Id;
   familyId: Id;
@@ -63,6 +76,8 @@ export interface Session {
   requirements: SessionRequirement[];
   sets: SetEntry[];
   notes?: string | null;
+  /** Optional like `notes`: most sessions carry none. */
+  exerciseNotes?: SessionExerciseNote[];
 }
 
 /** How a skip reads on screen. Ordered by how often it is the real answer. */

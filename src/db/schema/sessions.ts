@@ -76,6 +76,36 @@ export const sessionRequirements = sqliteTable(
 );
 
 /**
+ * A note about one exercise *in one session* (#66).
+ *
+ * Deliberately not on the exercise itself. Seat height and bench angle are
+ * what he set the machine to that day, and the day is the point: recorded
+ * against the session they belong to, they become part of the history rather
+ * than a setting that silently rewrites what every past session appears to
+ * have used.
+ *
+ * Keyed on the pairing, not the exercise alone, for the same reason sets are:
+ * the same exercise used for two muscle groups in one session is two separate
+ * pieces of work.
+ */
+export const sessionExerciseNotes = sqliteTable(
+  "session_exercise_notes",
+  {
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    exerciseId: text("exercise_id")
+      .notNull()
+      .references(() => exercises.id),
+    muscleGroupId: text("muscle_group_id")
+      .notNull()
+      .references(() => muscleGroups.id),
+    note: text("note").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.sessionId, t.exerciseId, t.muscleGroupId] })],
+);
+
+/**
  * One recorded set. Carries exercise AND muscle group, which is what lets the
  * same exercise be logged twice in a session for two different groups without
  * either use counting for the other.

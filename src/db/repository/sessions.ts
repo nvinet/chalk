@@ -17,6 +17,7 @@ import { toSession, toSetEntry, toSkipReason } from '../mappers';
 import {
   familyMuscleGroups,
   muscleGroups,
+  sessionExerciseNotes,
   sessionRequirements,
   sessions,
   setEntries,
@@ -121,7 +122,61 @@ export function getSession(id: Id): Session | null {
     .all()
     .map(toSetEntry);
 
-  return toSession(row, requirements, sets);
+  const exerciseNotes = db
+    .select()
+    .from(sessionExerciseNotes)
+    .where(eq(sessionExerciseNotes.sessionId, id))
+    .all()
+    .map((r) => ({
+      exerciseId: r.exerciseId,
+      muscleGroupId: r.muscleGroupId,
+      note: r.note,
+    }));
+
+  return toSession(row, requirements, sets, exerciseNotes);
+}
+
+/**
+ * Writes, or clears, the note for one exercise in one session (#66).
+ *
+ * Saved as it is typed, like the sets themselves and like the session note —
+ * the app being killed mid-session must never be the reason something written
+ * down is gone (N7).
+ *
+ * An empty note deletes the row rather than storing a blank one, so "no note"
+ * has one representation instead of two.
+ */
+export function setSessionExerciseNote(
+  sessionId: Id,
+  exerciseId: Id,
+  muscleGroupId: Id,
+  note: string,
+): void {
+  const trimmed = note.trim();
+  if (trimmed === '') {
+    db.delete(sessionExerciseNotes)
+      .where(
+        and(
+          eq(sessionExerciseNotes.sessionId, sessionId),
+          eq(sessionExerciseNotes.exerciseId, exerciseId),
+          eq(sessionExerciseNotes.muscleGroupId, muscleGroupId),
+        ),
+      )
+      .run();
+    return;
+  }
+
+  db.insert(sessionExerciseNotes)
+    .values({ sessionId, exerciseId, muscleGroupId, note: trimmed })
+    .onConflictDoUpdate({
+      target: [
+        sessionExerciseNotes.sessionId,
+        sessionExerciseNotes.exerciseId,
+        sessionExerciseNotes.muscleGroupId,
+      ],
+      set: { note: trimmed },
+    })
+    .run();
 }
 
 /**

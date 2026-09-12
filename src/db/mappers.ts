@@ -15,6 +15,7 @@ import type {
   Family,
   MuscleGroup,
   Session,
+  SessionExerciseNote,
   SessionRequirement,
   SessionStatus,
   SetEntry,
@@ -130,6 +131,7 @@ export function toSession(
   row: SessionRow,
   requirements: SessionRequirement[],
   sets: SetEntry[],
+  exerciseNotes: SessionExerciseNote[] = [],
 ): Session {
   return {
     id: row.id,
@@ -141,5 +143,6 @@ export function toSession(
     requirements,
     sets,
     notes: row.notes,
+    exerciseNotes,
   };
 }
