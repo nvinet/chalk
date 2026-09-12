@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { RestBar } from '@/components/rest-bar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, MinTouchTarget, Spacing } from '@/constants/theme';
@@ -22,9 +23,11 @@ import {
   outstandingGroups,
   type MuscleGroupOutcome,
 } from '@/domain/completion';
+import { isFinished, remainingSeconds, restProgress } from '@/domain/rest';
 import { lastTimeForPairing } from '@/domain/scoring';
 import { skipReasonLabel, type Exercise, type Id, type Session } from '@/domain/types';
 import { useTheme } from '@/hooks/use-theme';
+import { clearRest, useCurrentRest } from '@/hooks/use-rest-timer';
 
 /**
  * W2 — the spine of a session (#20).
@@ -39,6 +42,10 @@ export default function SessionScreen() {
 
   // Live: adding a set re-reads the session, so progress updates as he logs.
   const session = useSession(id);
+
+  // Before the early return: the rest is global, so this hook cannot be
+  // conditional on having found a session.
+  const rest = useCurrentRest();
 
   // The catalogue does not change during a session, so it is read once.
   const catalogue = useMemo(() => {
@@ -79,11 +86,23 @@ export default function SessionScreen() {
    * than blocks. A session with everything met finishes straight away — there
    * is nothing to warn about, and a prompt would just be a tap in the way.
    */
+  /**
+   * Ending a session ends any rest with it, scheduled notification included
+   * (#63). Routed through one function because there are three ways out —
+   * finish, finish-anyway and abandon — and a rest left behind at any of them
+   * is a "Rest is up" that arrives once he is home.
+   */
+  const endSession = (how: 'finish' | 'abandon') => {
+    clearRest();
+    if (how === 'finish') finishSession(session.id);
+    else abandonSession(session.id);
+    showSummary();
+  };
+
   const finish = () => {
     const outstanding = outcome.requiredGroupsTotal - outcome.requiredGroupsMet;
     if (outstanding === 0) {
-      finishSession(session.id);
-      showSummary();
+      endSession('finish');
       return;
     }
 
@@ -94,10 +113,7 @@ export default function SessionScreen() {
         { text: 'Keep going', style: 'cancel' },
         {
           text: 'Finish',
-          onPress: () => {
-            finishSession(session.id);
-            showSummary();
-          },
+          onPress: () => endSession('finish'),
         },
       ],
     );
@@ -116,10 +132,7 @@ export default function SessionScreen() {
         {
           text: 'Abandon',
           style: 'destructive',
-          onPress: () => {
-            abandonSession(session.id);
-            showSummary();
-          },
+          onPress: () => endSession('abandon'),
         },
       ],
     );
@@ -153,6 +166,19 @@ export default function SessionScreen() {
         </View>
 
         <ScrollView contentContainerStyle={styles.scroll}>
+          {/* Whatever is resting, wherever it was started. This is the screen
+              he is on between exercises, so it is where a rest he no longer
+              wants has to be reachable (#63). */}
+          {rest.timer && (
+            <RestBar
+              remaining={remainingSeconds(rest.timer, rest.now)}
+              progress={restProgress(rest.timer, rest.now)}
+              done={isFinished(rest.timer, rest.now)}
+              label={exercisesById.get(rest.timer.exerciseId)?.name}
+              onSkip={rest.skip}
+            />
+          )}
+
           <ThemedText>
             {outcome.requiredGroupsMet} of {outcome.requiredGroupsTotal} muscle groups met
           </ThemedText>

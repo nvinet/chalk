@@ -72,6 +72,66 @@ async function unschedule() {
   await Notifications.cancelScheduledNotificationAsync(id);
 }
 
+/**
+ * Ends the rest from outside React (#63).
+ *
+ * Finishing or abandoning a session has to cancel the pending notification,
+ * and neither happens on the screen that owns the countdown — by then the
+ * exercise screen is unmounted and its `skip` went with it. A module-level
+ * function is reachable from wherever the session actually ends.
+ */
+export function clearRest() {
+  void unschedule();
+  set(null);
+}
+
+/**
+ * The one-second repaint, shared by every screen showing a rest.
+ *
+ * Only the repaint: remaining time is always derived from the end time, so a
+ * throttled or suspended interval costs a stale pixel and never a wrong
+ * number.
+ */
+function useTick(active: boolean): number {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!active) return;
+    const tick = () => setNow(Date.now());
+    tick();
+    const interval = setInterval(tick, 1000);
+    // Coming back from the lock screen: repaint at once rather than waiting
+    // out the rest of a second that may have been throttled away.
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') tick();
+    });
+    return () => {
+      clearInterval(interval);
+      subscription.remove();
+    };
+  }, [active]);
+
+  return now;
+}
+
+/**
+ * The running rest whatever pairing it belongs to, for screens that do not own
+ * it (#63).
+ *
+ * The exercise screen shows only its own rest, because a countdown for some
+ * other exercise above its steppers would be noise. Everywhere else inside a
+ * session the opposite is true: a rest running with no way to stop it is what
+ * put a notification on his phone after he had gone home.
+ */
+export function useCurrentRest(): {
+  timer: RestTimer | null;
+  now: number;
+  skip: () => void;
+} {
+  const timer = useSyncExternalStore(subscribe, () => current, () => current);
+  return { timer, now: useTick(timer !== null), skip: clearRest };
+}
+
 export interface Pairing {
   exerciseId: string;
   muscleGroupId: string;
@@ -97,26 +157,10 @@ export interface RestControls {
  */
 export function useRestTimer(pairing: Pairing, enabled = true): RestControls {
   const timer = useSyncExternalStore(subscribe, () => current, () => current);
-  const [now, setNow] = useState(() => Date.now());
+  const now = useTick(timer !== null);
   const finishedAt = useRef<number | null>(null);
 
   const mine = timer && isForPairing(timer, pairing) ? timer : null;
-
-  useEffect(() => {
-    if (!timer) return;
-    const tick = () => setNow(Date.now());
-    tick();
-    const interval = setInterval(tick, 1000);
-    // Coming back from the lock screen: repaint at once rather than waiting
-    // out the rest of a second that may have been throttled away.
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') tick();
-    });
-    return () => {
-      clearInterval(interval);
-      subscription.remove();
-    };
-  }, [timer]);
 
   // A single buzz the moment it runs out, and only for the screen that owns
   // the rest — so leaving it running and coming back does not re-buzz.
@@ -133,7 +177,6 @@ export function useRestTimer(pairing: Pairing, enabled = true): RestControls {
       void unschedule();
       const next = startRest(pairing, seconds, Date.now());
       set(next);
-      setNow(Date.now());
       if (next) void schedule(exerciseName, seconds);
     },
     [pairing],
@@ -151,10 +194,7 @@ export function useRestTimer(pairing: Pairing, enabled = true): RestControls {
     [],
   );
 
-  const skip = useCallback(() => {
-    void unschedule();
-    set(null);
-  }, []);
+  const skip = useCallback(() => clearRest(), []);
 
   return { timer: mine, now, start, extend, skip };
 }

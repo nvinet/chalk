@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { RestBar } from '@/components/rest-bar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, MinTouchTarget, Spacing } from '@/constants/theme';
@@ -21,8 +22,10 @@ import {
   setsLoggedForGroup,
   setsRequiredFor,
 } from '@/domain/completion';
+import { isFinished, remainingSeconds, restProgress } from '@/domain/rest';
 import { lastTimeForPairing } from '@/domain/scoring';
 import { skipReasonLabel, type Exercise, type Session, type SetEntry } from '@/domain/types';
+import { useCurrentRest } from '@/hooks/use-rest-timer';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -38,6 +41,9 @@ export default function MuscleGroupScreen() {
   const { id, groupId } = useLocalSearchParams<{ id: string; groupId: string }>();
   const colors = useTheme();
   const session = useSession(id);
+
+  // Global, so it is read before any early return.
+  const rest = useCurrentRest();
 
   const data = useMemo(() => {
     return {
@@ -128,6 +134,19 @@ export default function MuscleGroupScreen() {
         </View>
 
         <ScrollView contentContainerStyle={styles.scroll}>
+          {/* Reachable here too: this is the screen he lands on when he leaves
+              an exercise, which is exactly when a rest he is done with should
+              be stoppable (#63). */}
+          {rest.timer && (
+            <RestBar
+              remaining={remainingSeconds(rest.timer, rest.now)}
+              progress={restProgress(rest.timer, rest.now)}
+              done={isFinished(rest.timer, rest.now)}
+              label={data.allExercises.find((e) => e.id === rest.timer!.exerciseId)?.name}
+              onSkip={rest.skip}
+            />
+          )}
+
           <ThemedText type="code" style={styles.heading}>
             exercises for {data.name.toLowerCase()}
           </ThemedText>

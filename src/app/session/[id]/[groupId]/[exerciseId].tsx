@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { RestBar } from '@/components/rest-bar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, MinTouchTarget, Spacing } from '@/constants/theme';
@@ -31,7 +32,7 @@ import {
   type MeasureValues,
 } from '@/domain/measures';
 import { checkMeasures, referenceValues } from '@/domain/plausibility';
-import { formatRemaining, isFinished, remainingSeconds, restProgress } from '@/domain/rest';
+import { isFinished, remainingSeconds, restProgress } from '@/domain/rest';
 import { lastTimeForPairing } from '@/domain/scoring';
 import { useRestTimer } from '@/hooks/use-rest-timer';
 import { useTheme } from '@/hooks/use-theme';
@@ -283,55 +284,6 @@ export default function LogExerciseScreen() {
   );
 }
 
-/**
- * The countdown, in the row above the Log button.
- *
- * Reads at arm's length from the bench and never takes the screen over: the
- * steppers stay usable underneath it, so the whole thing can be ignored.
- */
-function RestBar({
-  remaining,
-  progress,
-  done,
-  onSkip,
-  onExtend,
-}: {
-  remaining: number;
-  progress: number;
-  done: boolean;
-  onSkip: () => void;
-  onExtend: () => void;
-}) {
-  const colors = useTheme();
-  const tint = done ? colors.met : colors.accent;
-
-  return (
-    <View style={styles.rest}>
-      <View style={styles.restHead}>
-        <ThemedText type="code">{done ? 'rest is up' : 'resting'}</ThemedText>
-        <ThemedText type="smallBold" style={{ color: tint }}>
-          {formatRemaining(remaining)}
-        </ThemedText>
-      </View>
-
-      <View style={[styles.restTrack, { backgroundColor: colors.backgroundElement }]}>
-        <View
-          style={[styles.restFill, { backgroundColor: tint, width: `${progress * 100}%` }]}
-        />
-      </View>
-
-      <View style={styles.restActions}>
-        <Pressable onPress={onSkip} accessibilityRole="button" style={styles.restButton}>
-          <ThemedText type="link">{done ? 'clear' : 'skip'}</ThemedText>
-        </Pressable>
-        <Pressable onPress={onExtend} accessibilityRole="button" style={styles.restButton}>
-          <ThemedText type="link">+30s</ThemedText>
-        </Pressable>
-      </View>
-    </View>
-  );
-}
-
 /** Big steppers, with the number itself editable — tapping it raises a keypad. */
 function Stepper({
   label,
@@ -414,12 +366,6 @@ const styles = StyleSheet.create({
   colValue: { flex: 1 },
   colAction: { minHeight: MinTouchTarget, minWidth: 72, justifyContent: 'center' },
   field: { gap: Spacing.two },
-  rest: { gap: Spacing.two },
-  restHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  restTrack: { height: 6, borderRadius: 3, overflow: 'hidden' },
-  restFill: { height: 6, borderRadius: 3 },
-  restActions: { flexDirection: 'row', justifyContent: 'space-between' },
-  restButton: { minHeight: MinTouchTarget, minWidth: 72, justifyContent: 'center' },
   warning: {
     flexDirection: 'row',
     alignItems: 'center',
