@@ -73,18 +73,18 @@ export default function MoreScreen() {
           catalogue
         </ThemedText>
         <ThemedView type="backgroundElement" style={styles.card}>
+          <Pressable onPress={() => router.push('/catalogue/families')} accessibilityRole="button">
+            <HintRow
+              title="Families"
+              hint={<ThemedText type="link">{catalogue.families} ›</ThemedText>}
+            />
+          </Pressable>
           <Pressable
             onPress={() => router.push('/catalogue/muscle-groups')}
             accessibilityRole="button">
             <HintRow
               title="Muscle groups"
               hint={<ThemedText type="link">{catalogue.muscleGroups} ›</ThemedText>}
-            />
-          </Pressable>
-          <Pressable onPress={() => router.push('/catalogue/families')} accessibilityRole="button">
-            <HintRow
-              title="Families"
-              hint={<ThemedText type="link">{catalogue.families} ›</ThemedText>}
             />
           </Pressable>
           <Pressable onPress={() => router.push('/catalogue/exercises')} accessibilityRole="button">

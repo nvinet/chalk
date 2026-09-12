@@ -3,6 +3,7 @@ import * as Notifications from 'expo-notifications';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StyleSheet, useColorScheme, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { KeepAwakeWhileTraining } from '@/components/keep-awake-while-training';
@@ -79,23 +80,28 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={theme}>
-      <AnimatedSplashOverlay />
-      {/* The session keeps the screen awake, not any particular screen. */}
-      <KeepAwakeWhileTraining />
-      <View style={styles.fill}>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          {/* A session covers the tabs: it is a mode, not a destination. */}
-          <Stack.Screen name="session/[id]" />
-          {/* Catalogue editors, reached from More. */}
-          <Stack.Screen name="catalogue/muscle-groups" />
-          <Stack.Screen name="catalogue/families" />
-          <Stack.Screen name="catalogue/exercises" />
-          <Stack.Screen name="catalogue/exercise/[id]" />
-        </Stack>
-      </View>
-    </ThemeProvider>
+    // Gesture handler's own root, mounted explicitly rather than relied on:
+    // the JS stack navigator provides one, this app uses the native stack, and
+    // dragging to reorder the catalogue (#69) needs it either way.
+    <GestureHandlerRootView style={styles.fill}>
+      <ThemeProvider value={theme}>
+        <AnimatedSplashOverlay />
+        {/* The session keeps the screen awake, not any particular screen. */}
+        <KeepAwakeWhileTraining />
+        <View style={styles.fill}>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+            {/* A session covers the tabs: it is a mode, not a destination. */}
+            <Stack.Screen name="session/[id]" />
+            {/* Catalogue editors, reached from More. */}
+            <Stack.Screen name="catalogue/muscle-groups" />
+            <Stack.Screen name="catalogue/families" />
+            <Stack.Screen name="catalogue/exercises" />
+            <Stack.Screen name="catalogue/exercise/[id]" />
+          </Stack>
+        </View>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
 

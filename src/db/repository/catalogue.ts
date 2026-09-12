@@ -223,13 +223,18 @@ export function deleteMuscleGroup(id: Id): void {
   });
 }
 
-/** Writes the given order as positions, so a drag or a move survives a reload. */
-export function reorderMuscleGroups(idsInOrder: Id[]): void {
+/**
+ * Writes the given order as positions (#69).
+ *
+ * Families have carried a `position` column since the schema was written and
+ * nothing has ever written to it — the order was whatever the seed inserted.
+ */
+export function reorderFamilies(idsInOrder: Id[]): void {
   db.transaction((tx) => {
     idsInOrder.forEach((id, index) => {
-      tx.update(muscleGroups)
+      tx.update(families)
         .set({ position: index + 1 })
-        .where(eq(muscleGroups.id, id))
+        .where(eq(families.id, id))
         .run();
     });
   });
@@ -253,6 +258,18 @@ export function familyOfMuscleGroup(id: Id): Family | null {
  * fires and the list re-reads itself. Without it the screen would need a
  * counter bumped by hand after every edit, which is a dependency the linter
  * rightly cannot see the point of.
+ */
+/**
+ * Note on `muscle_groups.position`: nothing writes it any more (#69).
+ *
+ * It used to be reordered by ↑/↓ on a screen that displayed groups by family,
+ * so the buttons moved something the screen was not showing. Dragging now
+ * writes `family_muscle_groups.position`, which is the order the session
+ * screen reads and the only one that was ever visible.
+ *
+ * The column stays because it still gives this query a deterministic order and
+ * every other caller uses the result as a name lookup, where order is
+ * immaterial. Dropping it would be a destructive migration for no gain.
  */
 export function useMuscleGroups(): MuscleGroup[] {
   const live = useLiveQuery(db.select().from(muscleGroups).orderBy(asc(muscleGroups.position)));

@@ -1,35 +1,43 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import ReorderableList, {
+  useIsActive,
+  useReorderableDrag,
+  reorderItems,
+} from 'react-native-reorderable-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, MinTouchTarget, Spacing } from '@/constants/theme';
-import {
-  listFamilies,
-  muscleGroupsForFamily,
-  reorderFamilyMuscleGroups,
-  setRequiredExerciseCount,
-} from '@/db/repository';
+import { listFamilies, muscleGroupsForFamily, reorderFamilies } from '@/db/repository';
 import type { Family } from '@/domain/types';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
- * W10 — what each family asks of a session (#15).
+ * W10 — the families, and the order they appear in (#15, reshaped by #69).
  *
- * The muscle groups in a family, in the order they are trained, each with the
- * number of distinct exercises it needs. Naming and creating groups is the
- * other screen (#60); this one decides what a session has to contain.
+ * **Only families.** It used to list each family's muscle groups with their
+ * required counts, which made it near-indistinguishable from the muscle groups
+ * screen: two screens, the same names, the same shape, and nothing saying
+ * which owned what. Those rows now live on the muscle groups screen, which was
+ * already segmented by family and is the better home for them.
  *
- * Nothing here can change a session already logged. Requirements are
- * snapshotted when a session starts (#19), so raising chest from one to two
- * today leaves August exactly as it was.
+ * What is left is the one thing only this screen can say: which families
+ * there are, and in what order everything else lists them.
  */
+type Row = { family: Family; groups: number };
+
 export default function FamiliesScreen() {
   // Read on mount. Nothing off this screen changes a family while it is open,
   // and navigating back to it mounts it again.
-  const [families] = useState(() => listFamilies().filter((f) => f.usesMuscleGroups));
+  const [rows, setRows] = useState<Row[]>(() =>
+    listFamilies().map((family) => ({
+      family,
+      groups: muscleGroupsForFamily(family.id).filter((r) => !r.group.implicit).length,
+    })),
+  );
 
   return (
     <ThemedView style={styles.container}>
@@ -45,109 +53,62 @@ export default function FamiliesScreen() {
           <View style={styles.headerButton} />
         </View>
 
-        <ScrollView contentContainerStyle={styles.scroll}>
-          <ThemedText type="small" themeColor="textSecondary">
-            How many distinct exercises each group needs for the session to succeed.
-            Changing these never alters a session already logged.
-          </ThemedText>
-
-          {families.map((family) => (
-            <FamilySection key={family.id} family={family} />
-          ))}
-
-          <ThemedText type="small" themeColor="textSecondary" style={styles.note}>
-            Cardio is scored as a whole rather than by muscle group, so it has nothing
-            to arrange here.
-          </ThemedText>
-        </ScrollView>
+        <ReorderableList
+          data={rows}
+          keyExtractor={(row) => row.family.id}
+          contentContainerStyle={styles.scroll}
+          onReorder={({ from, to }) => {
+            const next = reorderItems(rows, from, to);
+            setRows(next);
+            reorderFamilies(next.map((row) => row.family.id));
+          }}
+          ListHeaderComponent={
+            <ThemedText type="small" themeColor="textSecondary" style={styles.intro}>
+              Hold a family to drag it. This order is the order they appear in everywhere
+              else. What each family requires is set on the muscle groups screen.
+            </ThemedText>
+          }
+          renderItem={({ item }) => <FamilyRow row={item} />}
+        />
       </SafeAreaView>
     </ThemedView>
   );
 }
 
-function FamilySection({ family }: { family: Family }) {
+function FamilyRow({ row }: { row: Row }) {
   const colors = useTheme();
-
-  // This screen is the only writer of these rows, so it re-reads its own
-  // writes rather than watching the table.
-  const read = () => muscleGroupsForFamily(family.id).filter((r) => !r.group.implicit);
-  const [rows, setRows] = useState(read);
-
-  const setRequired = (muscleGroupId: string, required: number) => {
-    setRequiredExerciseCount(family.id, muscleGroupId, required);
-    setRows(read);
-  };
-
-  const move = (index: number, by: number) => {
-    const next = [...rows];
-    const target = index + by;
-    if (target < 0 || target >= next.length) return;
-    [next[index], next[target]] = [next[target]!, next[index]!];
-    reorderFamilyMuscleGroups(family.id, next.map((r) => r.group.id));
-    setRows(read);
-  };
-
-  const required = rows.filter((r) => r.requiredExerciseCount > 0).length;
+  const drag = useReorderableDrag();
+  const active = useIsActive();
 
   return (
-    <View style={styles.section}>
-      <View style={styles.sectionHead}>
-        <ThemedText type="code" style={styles.heading}>
-          {family.name.toLowerCase()}
-        </ThemedText>
+    <Pressable
+      onLongPress={drag}
+      delayLongPress={200}
+      accessibilityRole="button"
+      accessibilityLabel={`${row.family.name}. Hold to reorder.`}
+      style={[
+        styles.row,
+        {
+          borderColor: active ? colors.accent : colors.border,
+          backgroundColor: active ? colors.backgroundElement : 'transparent',
+        },
+      ]}>
+      {/* A grip, not a pair of arrows. It says "draggable" without being a
+          control that has to be aimed at twice per position (#69). */}
+      <ThemedText type="small" themeColor="textSecondary" style={styles.grip}>
+        ≡
+      </ThemedText>
+      <View style={styles.rowName}>
+        <ThemedText>{row.family.name}</ThemedText>
+        {/* A count, not a list. Saying how many groups a family has is a fact
+            about the family; listing them is the other screen's job. */}
         <ThemedText type="small" themeColor="textSecondary">
-          {required} of {rows.length} must be met
+          {row.family.usesMuscleGroups
+            ? `${row.groups} muscle ${row.groups === 1 ? 'group' : 'groups'}`
+            : 'no muscle groups — exercises directly'}
         </ThemedText>
       </View>
-
-      {rows.map((row, index) => (
-        <View key={row.group.id} style={[styles.row, { borderColor: colors.border }]}>
-          <View style={styles.rowName}>
-            <ThemedText>{row.group.name}</ThemedText>
-            {row.requiredExerciseCount === 0 && (
-              // The release valve: shown, trainable, never blocking.
-              <ThemedText type="small" themeColor="textSecondary">
-                optional — never blocks the session
-              </ThemedText>
-            )}
-          </View>
-
-          <Pressable
-            onPress={() => setRequired(row.group.id, row.requiredExerciseCount - 1)}
-            disabled={row.requiredExerciseCount === 0}
-            accessibilityRole="button"
-            accessibilityLabel={`Fewer exercises for ${row.group.name}`}
-            style={styles.iconButton}>
-            <ThemedText type="link" style={row.requiredExerciseCount === 0 && styles.dim}>
-              −
-            </ThemedText>
-          </Pressable>
-          <ThemedText style={styles.count}>{row.requiredExerciseCount}</ThemedText>
-          <Pressable
-            onPress={() => setRequired(row.group.id, row.requiredExerciseCount + 1)}
-            accessibilityRole="button"
-            accessibilityLabel={`More exercises for ${row.group.name}`}
-            style={styles.iconButton}>
-            <ThemedText type="link">+</ThemedText>
-          </Pressable>
-
-          <Pressable
-            onPress={() => move(index, -1)}
-            accessibilityRole="button"
-            accessibilityLabel={`Move ${row.group.name} up`}
-            style={styles.iconButton}>
-            <ThemedText type="link">↑</ThemedText>
-          </Pressable>
-          <Pressable
-            onPress={() => move(index, 1)}
-            accessibilityRole="button"
-            accessibilityLabel={`Move ${row.group.name} down`}
-            style={styles.iconButton}>
-            <ThemedText type="link">↓</ThemedText>
-          </Pressable>
-        </View>
-      ))}
-    </View>
+    </Pressable>
   );
 }
 
@@ -162,24 +123,18 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.three,
   },
   headerButton: { minHeight: MinTouchTarget, minWidth: 80, justifyContent: 'center' },
-  scroll: { paddingHorizontal: Spacing.four, paddingBottom: Spacing.five, gap: Spacing.four },
-  section: { gap: Spacing.one },
-  sectionHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  heading: { textTransform: 'uppercase' },
+  scroll: { paddingHorizontal: Spacing.four, paddingBottom: Spacing.five },
+  intro: { paddingBottom: Spacing.three },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: Spacing.three,
+    minHeight: MinTouchTarget,
     paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.two,
+    borderRadius: Spacing.two,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
+  grip: { minWidth: 16 },
   rowName: { flex: 1, gap: Spacing.half },
-  count: { minWidth: 24, textAlign: 'center' },
-  dim: { opacity: 0.3 },
-  iconButton: {
-    minHeight: MinTouchTarget,
-    minWidth: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  note: { paddingTop: Spacing.two },
 });
