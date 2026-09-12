@@ -36,7 +36,10 @@ Verified against the eleven historical sessions (§3.4 of the plan): five pass �
 a different five from the spreadsheet's own rule. Legs improves from one to
 three because a missed hack squat no longer sinks the session. Pull fails every
 time on forearms, which has one machine that was skipped both times it appeared.
-That finding is why **forearms ships with a required count of 0** pending Q27.
+That finding is why forearms was *intended* to ship with a required count of 0.
+It never did — the seed has always shipped 1 — and D18 removed the reason by
+giving forearms two exercises. Settled at 1 by D23; this paragraph's conclusion
+is obsolete, its reasoning about the spreadsheet era is not.
 
 ### D4 — Machines map to many muscle groups; each use counts once, for one group
 The mapping says what a machine *can* be used for. Credit comes only from a set
@@ -273,9 +276,11 @@ no claim. The rules stay covered by 60 tests on synthetic sessions, plus new
 seed integrity checks — referential integrity, no orphaned exercises, no
 stranded groups, cardio measured only by time or distance.
 
-**Q27 (#4) is not answered.** Every required count ships as 1. Note this makes a
-successful legs session need all five of its groups, which is stricter than
-anything in the historical record.
+**Q27 (#4) is answered by D23.** One exercise completes a group, forearms
+included, and three working sets complete a weight/reps exercise. Note the
+first of those makes a successful legs session need all five of its groups,
+which is stricter than anything in the historical record — confirmed
+deliberately rather than inherited.
 
 **Q6 (#7) becomes moot** — the unnamed exercise only mattered for mapping
 historical cells.
@@ -378,12 +383,47 @@ refusal costs only the notification. The on-screen countdown is the feature.
 
 ---
 
+### D23 — What completes an exercise, and what completes a group
+Agreed 12 Sep 2026 (issue #4, answering Q27). Q27 was widened by tester
+feedback on #31 before it was answered, so it settles two halves of one rule.
+
+**Three working sets complete an exercise, for weight/reps exercises only.**
+The count lives on the exercise and is editable, defaulting to 3. Timed and
+distance exercises are unchanged and still count on one qualifying entry: a run
+is not three runs, and there is no version of "three sets" that means anything
+on a treadmill.
+
+This overturns what D5 left implicit. D5 says an exercise counts when properly
+recorded, which in practice meant **one set was enough** — never decided, only
+never questioned. A single set of chest press discharging a chest requirement
+the way three sets do was the thing the feedback objected to, and it was right
+to.
+
+Warm-ups are excluded, as they already are everywhere else (D15), so three sets
+means three *working* sets.
+
+**One exercise completes a muscle group, forearms included.** The seeded
+default of 1 is confirmed as the decision rather than the placeholder it has
+been — and that now covers forearms, which D3 intended to ship at 0.
+
+D3's reason for the exception was that forearms had a single machine, skipped
+both times it appeared in the historical record; a group that reliably fails is
+one that teaches him to ignore the rule. **That reason expired with D18.** The
+agreed catalogue gives forearms two exercises — hammer curl and cable forearm
+curl — so there is a real choice at the machine, which is the condition D2
+relies on for a requirement to be fair rather than a trap.
+
+**The record and the code have disagreed here since D3 was written**, and the
+code was right. `docs/decisions.md` has claimed throughout that forearms ships
+requiring 0; `src/db/seed.ts` has always shipped 1, and no group in it is 0. The
+claim is struck rather than the seed changed — nothing to migrate, and no bug:
+the seed was correct for a reason nobody had written down.
+
 ## Open — ask, do not guess
 
 | | Question | Blocks |
 |---|---|---|
 | **Q31** | Can a session span families, and what does completion mean then? | Today (#32); session screen (#20); scheduling (#33) |
-| **Q27** | Required exercise count for each group in each family, **and the minimum sets before an exercise counts at all**. Default is 1; forearms currently 0; sets currently 1 by omission. | Seed values; the meaning of a successful session |
 | **Q11** | Body weight / measurements — wanted at all? | Deliberately out of v1 |
 
 ---

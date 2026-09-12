@@ -138,12 +138,15 @@ failure on first launch.
 These are unanswered and marked in `docs/decisions.md`. If a task needs one,
 stop and ask rather than inventing an answer:
 
-- **Q27** — the required exercise count per group per family. Everything ships
-  as `1`, which means a successful legs session needs all five of its groups.
+- **Q31** — whether a session may span families, and what a successful session
+  means if it can.
 - **Q11** — body weight and measurements, deliberately out of v1.
 
 The taxonomy is settled (D18), and so is the plan: the schedule is defined by
 hand and nothing is seeded (D19), and abs uses the normal session flow rather
 than a quick-log path (D20). Rest is settled too (D22): by the clock, started
 by logging a set, shown inline above the Log button, 90 seconds until an
-exercise proves otherwise.
+exercise proves otherwise. Completion is settled too (D23): one exercise
+completes every muscle group including forearms, while three *working* sets
+complete a weight/reps exercise — timed and distance exercises still count on
+one qualifying entry.

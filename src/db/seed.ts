@@ -13,8 +13,10 @@
  * Aliases carry the old spreadsheet spellings so search still finds them
  * (#17), even though no spreadsheet data is imported.
  *
- * Every required count is 1 for now. Q27 (#4) tailors them later; note that a
- * successful legs session therefore needs all five of its groups.
+ * Every required count is 1, confirmed by D23 rather than inherited; a
+ * successful legs session therefore needs all five of its groups. Forearms is 1
+ * like the rest: D3 wanted it optional when it had a single machine, and D18
+ * gave it two.
  */
 
 import type { Catalogue } from "../domain/types.ts";
