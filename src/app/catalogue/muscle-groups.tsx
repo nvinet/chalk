@@ -285,7 +285,15 @@ function GroupRow({
   const { group, requiredExerciseCount } = row;
 
   return (
-    <View
+    // The whole row is the handle (#69). The grip stayed the only draggable
+    // target for a while, which meant aiming at a 16pt glyph to move a row —
+    // the ↑/↓ buttons it replaced were easier to hit, which rather defeated
+    // the point. The grip remains as the thing that *says* "draggable".
+    <Pressable
+      onLongPress={drag}
+      delayLongPress={DRAG_AFTER_MS}
+      accessibilityRole="button"
+      accessibilityLabel={`${group.name}. Hold to reorder.`}
       style={[
         styles.row,
         {
@@ -293,19 +301,19 @@ function GroupRow({
           backgroundColor: active ? colors.backgroundElement : 'transparent',
         },
       ]}>
-      <Pressable
-        onLongPress={drag}
-        delayLongPress={DRAG_AFTER_MS}
-        accessibilityRole="button"
-        accessibilityLabel={`Hold to reorder ${group.name}`}
-        style={styles.gripButton}>
+      <View style={styles.gripButton}>
         <ThemedText type="small" themeColor="textSecondary">
           ≡
         </ThemedText>
-      </Pressable>
+      </View>
 
+      {/* Carries the drag as well as the tap: a nested Pressable swallows the
+          touch, so without its own `onLongPress` the name would be the one
+          dead strip in the middle of the row. */}
       <Pressable
         onPress={onRename}
+        onLongPress={drag}
+        delayLongPress={DRAG_AFTER_MS}
         accessibilityRole="button"
         accessibilityLabel={`Rename ${group.name}`}
         style={styles.rowName}>
@@ -351,7 +359,7 @@ function GroupRow({
           ×
         </ThemedText>
       </Pressable>
-    </View>
+    </Pressable>
   );
 }
 
