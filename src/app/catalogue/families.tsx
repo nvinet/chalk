@@ -1,7 +1,6 @@
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Gesture } from 'react-native-gesture-handler';
 import ReorderableList, {
   useIsActive,
   useReorderableDrag,
@@ -30,9 +29,6 @@ import { useTheme } from '@/hooks/use-theme';
  */
 type Row = { family: Family; groups: number };
 
-/** How long a press must be held before it becomes a drag rather than a tap. */
-const DRAG_AFTER_MS = 200;
-
 export default function FamiliesScreen() {
   // Read on mount. Nothing off this screen changes a family while it is open,
   // and navigating back to it mounts it again.
@@ -42,12 +38,6 @@ export default function FamiliesScreen() {
       groups: muscleGroupsForFamily(family.id).filter((r) => !r.group.implicit).length,
     })),
   );
-
-  // The drag must win against two other gestures: the page scroll, and the
-  // stack's swipe-back at the left edge. Requiring a long press first is the
-  // library's own answer, and the threshold has to sit just above the
-  // Pressable's `delayLongPress` or the press fires without the pan arming.
-  const panGesture = useMemo(() => Gesture.Pan().activateAfterLongPress(DRAG_AFTER_MS + 20), []);
 
   return (
     <ThemedView style={styles.container}>
@@ -67,7 +57,6 @@ export default function FamiliesScreen() {
           data={rows}
           keyExtractor={(row) => row.family.id}
           contentContainerStyle={styles.scroll}
-          panGesture={panGesture}
           // Required for `useIsActive` in the row to ever report true.
           shouldUpdateActiveItem
           onReorder={({ from, to }) => {
@@ -96,7 +85,6 @@ function FamilyRow({ row }: { row: Row }) {
   return (
     <Pressable
       onLongPress={drag}
-      delayLongPress={DRAG_AFTER_MS}
       accessibilityRole="button"
       accessibilityLabel={`${row.family.name}. Hold to reorder.`}
       style={[
