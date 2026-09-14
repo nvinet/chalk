@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import {
   Sortable,
   SortableItem,
@@ -12,7 +12,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, MinTouchTarget, Spacing } from '@/constants/theme';
-import { listFamilies, muscleGroupsForFamily, reorderFamilies } from '@/db/repository';
+import {
+  createFamily,
+  listFamilies,
+  muscleGroupsForFamily,
+  reorderFamilies,
+} from '@/db/repository';
 import type { Family } from '@/domain/types';
 import { useTheme } from '@/hooks/use-theme';
 import { HandleWidth, orderedIds, RowHeight } from './drag';
@@ -32,15 +37,29 @@ import { HandleWidth, orderedIds, RowHeight } from './drag';
 type Row = { id: string; family: Family; groups: number };
 
 export default function FamiliesScreen() {
-  // Read on mount. Nothing off this screen changes a family while it is open,
-  // and navigating back to it mounts it again.
-  const [rows] = useState<Row[]>(() =>
+  const colors = useTheme();
+
+  // Read on mount, and again after adding — nothing off this screen changes a
+  // family while it is open, and navigating back to it mounts it again.
+  const read = () =>
     listFamilies().map((family) => ({
       id: family.id,
       family,
       groups: muscleGroupsForFamily(family.id).filter((r) => !r.group.implicit).length,
-    })),
-  );
+    }));
+
+  const [rows, setRows] = useState<Row[]>(read);
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState('');
+
+  const add = () => {
+    const name = newName.trim();
+    if (name === '') return;
+    createFamily(name);
+    setNewName('');
+    setAdding(false);
+    setRows(read());
+  };
 
   const renderItem = useCallback((props: SortableRenderItemProps<Row>) => {
     const { item, id, ...rest } = props;
@@ -67,8 +86,39 @@ export default function FamiliesScreen() {
             <ThemedText type="link">‹ More</ThemedText>
           </Pressable>
           <ThemedText type="smallBold">Families</ThemedText>
-          <View style={styles.headerButton} />
+          <Pressable
+            onPress={() => {
+              setNewName('');
+              setAdding((open) => !open);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={adding ? 'Cancel adding a family' : 'Add a family'}
+            style={[styles.headerButton, styles.headerAction]}>
+            <SymbolView
+              name={adding ? 'xmark' : 'plus'}
+              tintColor={colors.accent}
+              size={20}
+            />
+          </Pressable>
         </View>
+
+        {adding && (
+          <View style={styles.addRow}>
+            <TextInput
+              value={newName}
+              onChangeText={setNewName}
+              placeholder="New family"
+              placeholderTextColor={colors.textSecondary}
+              autoFocus
+              onSubmitEditing={add}
+              returnKeyType="done"
+              style={[styles.input, { color: colors.text, borderColor: colors.border }]}
+            />
+            <Pressable onPress={add} accessibilityRole="button" style={styles.addButton}>
+              <ThemedText type="link">Add</ThemedText>
+            </Pressable>
+          </View>
+        )}
 
         <ThemedText type="small" themeColor="textSecondary" style={styles.intro}>
           Drag by the grip to reorder. This is the order families appear in everywhere
@@ -130,6 +180,22 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.three,
   },
   headerButton: { minHeight: MinTouchTarget, minWidth: 80, justifyContent: 'center' },
+  headerAction: { alignItems: 'flex-end' },
+  addRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    paddingBottom: Spacing.three,
+  },
+  addButton: { minHeight: MinTouchTarget, justifyContent: 'center' },
+  input: {
+    flex: 1,
+    minHeight: MinTouchTarget,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Spacing.three,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
   intro: { paddingHorizontal: Spacing.four, paddingBottom: Spacing.three },
   list: { backgroundColor: 'transparent' },
   row: {

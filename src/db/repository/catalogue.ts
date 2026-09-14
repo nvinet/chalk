@@ -159,6 +159,37 @@ export function isUsed(usage: Usage): boolean {
 }
 
 /**
+ * Adds a family (#69).
+ *
+ * It starts with no muscle groups, which is a real state rather than a broken
+ * one: the family exists, and the muscle groups screen is where its groups are
+ * added. Note that a session for a family with no groups has nothing required
+ * of it and therefore succeeds trivially — D3's rule applied to an empty list.
+ *
+ * `usesMuscleGroups` is true. The false case is cardio, which is scored as a
+ * whole and is a property of that one family rather than something to choose
+ * when creating others.
+ */
+export function createFamily(name: string): Id {
+  const id = newId('family');
+
+  db.transaction((tx) => {
+    const lastPosition =
+      tx
+        .select({ position: families.position })
+        .from(families)
+        .orderBy(desc(families.position))
+        .get()?.position ?? 0;
+
+    tx.insert(families)
+      .values({ id, name: name.trim(), position: lastPosition + 1 })
+      .run();
+  });
+
+  return id;
+}
+
+/**
  * Adds a muscle group and puts it in a family.
  *
  * A group outside every family can never be trained, so the two are one action
