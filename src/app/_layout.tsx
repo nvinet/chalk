@@ -98,8 +98,6 @@ export default function RootLayout() {
             <Stack.Screen name="catalogue/families" />
             <Stack.Screen name="catalogue/exercises" />
             <Stack.Screen name="catalogue/exercise/[id]" />
-            {/* Temporary, for #69. Delete with src/app/catalogue/drag-probe.tsx. */}
-            <Stack.Screen name="catalogue/drag-probe" />
           </Stack>
         </View>
       </ThemeProvider>

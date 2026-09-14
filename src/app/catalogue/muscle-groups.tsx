@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { SymbolView } from 'expo-symbols';
+import { useCallback, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
-import ReorderableList, {
-  reorderItems,
-  useIsActive,
-  useReorderableDrag,
-} from 'react-native-reorderable-list';
+import {
+  Sortable,
+  SortableItem,
+  type SortableRenderItemProps,
+} from 'react-native-reanimated-dnd';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -27,6 +28,7 @@ import {
 import type { FamilyMuscleGroupView } from '@/db/repository';
 import type { MuscleGroup } from '@/domain/types';
 import { useTheme } from '@/hooks/use-theme';
+import { HandleWidth, orderedIds, RowHeight } from './drag';
 
 /**
  * The muscle groups, and what each family asks of them (#60, reshaped by #69).
@@ -44,9 +46,11 @@ import { useTheme } from '@/hooks/use-theme';
  * family at once, which meant a draggable list per family nested inside a
  * scrolling page — the arrangement React Native warns about, because a
  * virtualised list inside a plain scroll view loses the windowing and
- * measurement that dragging reads to decide where a row lands. It did not
- * work, and no amount of gesture tuning was going to make it. One list filling
- * the screen is the shape the library is built around.
+ * measurement that dragging reads to decide where a row lands. One list
+ * filling the screen is the shape these libraries are built around.
+ *
+ * **Only the grip drags**, as in a native table. `SortableItem.Handle` also
+ * disables the whole-row pan, so every other tap on the row stays a tap.
  *
  * The order dragged here is `family_muscle_groups.position`, which is what the
  * session screen reads. The ↑/↓ buttons this replaced wrote a global order
@@ -72,7 +76,10 @@ export default function MuscleGroupsScreen() {
   // version of an order it has just written.
   const [tick, setTick] = useState(0);
   const rows = useMemo(
-    () => (familyId ? muscleGroupsForFamily(familyId).filter((r) => !r.group.implicit) : []),
+    () =>
+      (familyId ? muscleGroupsForFamily(familyId).filter((r) => !r.group.implicit) : []).map(
+        (r) => ({ id: r.group.id, ...r }),
+      ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [familyId, all, tick],
   );
@@ -118,6 +125,33 @@ export default function MuscleGroupsScreen() {
       { text: 'Delete', style: 'destructive', onPress: () => deleteMuscleGroup(group.id) },
     ]);
   };
+
+  const renderItem = useCallback(
+    (props: SortableRenderItemProps<(typeof rows)[number]>) => {
+      const { item, id, ...rest } = props;
+      return (
+        <SortableItem
+          key={id}
+          id={id}
+          data={item}
+          {...rest}
+          onDrop={(_dropped, _position, all2) =>
+            reorderFamilyMuscleGroups(familyId, orderedIds(all2))
+          }>
+          <GroupRow
+            row={item}
+            onRename={() => rename(item.group)}
+            onRemove={() => remove(item.group)}
+            onRequired={(next) => {
+              setRequiredExerciseCount(familyId, item.group.id, next);
+              setTick((n) => n + 1);
+            }}
+          />
+        </SortableItem>
+      );
+    },
+    [familyId],
+  );
 
   const add = () => {
     const name = newName.trim();
@@ -165,80 +199,54 @@ export default function MuscleGroupsScreen() {
           ))}
         </View>
 
-        <ReorderableList
-          data={rows}
-          keyExtractor={(row) => row.group.id}
-          contentContainerStyle={styles.scroll}
-          shouldUpdateActiveItem
-          onReorder={({ from, to }) => {
-            const next = reorderItems(rows, from, to);
-            reorderFamilyMuscleGroups(familyId, next.map((r) => r.group.id));
-            setTick((n) => n + 1);
-          }}
-          ListHeaderComponent={
-            <View style={styles.intro}>
-              <ThemedText type="small" themeColor="textSecondary">
-                Hold a group to drag it into the order it is trained in. The number is how
-                many distinct exercises it needs before {family?.name.toLowerCase() ?? 'the family'}{' '}
-                counts it as done. Changing either never alters a session already logged.
-              </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {required} of {rows.length} must be met
-              </ThemedText>
-            </View>
-          }
-          ListFooterComponent={
-            <View style={styles.footer}>
-              {adding ? (
-                <View style={styles.addRow}>
-                  <TextInput
-                    value={newName}
-                    onChangeText={setNewName}
-                    placeholder={`New ${family?.name.toLowerCase() ?? ''} group`}
-                    placeholderTextColor={colors.textSecondary}
-                    autoFocus
-                    onSubmitEditing={add}
-                    style={[styles.input, { color: colors.text, borderColor: colors.border }]}
-                  />
-                  <Pressable onPress={add} accessibilityRole="button" style={styles.iconButton}>
-                    <ThemedText type="link">Add</ThemedText>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => setAdding(false)}
-                    accessibilityRole="button"
-                    style={styles.iconButton}>
-                    <ThemedText type="small" themeColor="textSecondary">
-                      Cancel
-                    </ThemedText>
-                  </Pressable>
-                </View>
-              ) : (
-                <Pressable
-                  onPress={() => setAdding(true)}
-                  accessibilityRole="button"
-                  style={styles.addButton}>
-                  <ThemedText type="link">+ Add a group</ThemedText>
-                </Pressable>
-              )}
+        <ThemedText type="small" themeColor="textSecondary" style={styles.intro}>
+          Drag by the grip to set the order they are trained in. The number is how many
+          distinct exercises the group needs before{' '}
+          {family?.name.toLowerCase() ?? 'the family'} counts it as done — {required} of{' '}
+          {rows.length} must be met. Changing either never alters a session already logged.
+        </ThemedText>
 
-              <ThemedText type="small" themeColor="textSecondary" style={styles.note}>
-                Cardio has no muscle groups — it is scored as a whole, so it is not listed
-                here.
-              </ThemedText>
-            </View>
-          }
-          renderItem={({ item }) => (
-            <GroupRow
-              row={item}
-              onRename={() => rename(item.group)}
-              onRemove={() => remove(item.group)}
-              onRequired={(next) => {
-                setRequiredExerciseCount(familyId, item.group.id, next);
-                setTick((n) => n + 1);
-              }}
-            />
-          )}
+        <Sortable
+          data={rows}
+          renderItem={renderItem}
+          itemHeight={RowHeight}
+          // The library styles its own scroll view white, ignoring the theme.
+          style={styles.list}
         />
+
+        <View style={styles.footer}>
+          {adding ? (
+            <View style={styles.addRow}>
+              <TextInput
+                value={newName}
+                onChangeText={setNewName}
+                placeholder={`New ${family?.name.toLowerCase() ?? ''} group`}
+                placeholderTextColor={colors.textSecondary}
+                autoFocus
+                onSubmitEditing={add}
+                style={[styles.input, { color: colors.text, borderColor: colors.border }]}
+              />
+              <Pressable onPress={add} accessibilityRole="button" style={styles.iconButton}>
+                <ThemedText type="link">Add</ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={() => setAdding(false)}
+                accessibilityRole="button"
+                style={styles.iconButton}>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Cancel
+                </ThemedText>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              onPress={() => setAdding(true)}
+              accessibilityRole="button"
+              style={styles.addButton}>
+              <ThemedText type="link">+ Add a group</ThemedText>
+            </Pressable>
+          )}
+        </View>
       </SafeAreaView>
     </ThemedView>
   );
@@ -256,51 +264,38 @@ function GroupRow({
   onRequired: (next: number) => void;
 }) {
   const colors = useTheme();
-  const drag = useReorderableDrag();
-  const active = useIsActive();
   const { group, requiredExerciseCount } = row;
 
   return (
-    // The whole row is the handle: aiming at a 16pt grip to move a row was
-    // harder than the ↑/↓ buttons it replaced.
-    <Pressable
-      onLongPress={drag}
-      accessibilityRole="button"
-      accessibilityLabel={`${group.name}. Hold to reorder.`}
-      style={[
-        styles.row,
-        {
-          borderColor: active ? colors.accent : colors.border,
-          backgroundColor: active ? colors.backgroundElement : 'transparent',
-        },
-      ]}>
-      <View style={styles.grip}>
-        <ThemedText type="small" themeColor="textSecondary">
-          ≡
-        </ThemedText>
-      </View>
+    <View style={[styles.row, { borderColor: colors.border }]}>
+      {/* Only the grip drags, as on iOS. */}
+      <SortableItem.Handle style={styles.grip}>
+        <SymbolView
+          name="line.3.horizontal"
+          tintColor={colors.textSecondary}
+          size={24}
+          accessibilityLabel={`Reorder ${group.name}`}
+        />
+      </SortableItem.Handle>
 
-      {/* Carries the drag as well as the tap: a nested Pressable swallows the
-          touch, so without its own `onLongPress` the name would be a dead
-          strip through the middle of an otherwise draggable row. */}
       <Pressable
         onPress={onRename}
-        onLongPress={drag}
         accessibilityRole="button"
         accessibilityLabel={`Rename ${group.name}`}
         style={styles.rowName}>
-        <ThemedText>{group.name}</ThemedText>
-        {group.archived && (
+        <ThemedText numberOfLines={1}>{group.name}</ThemedText>
+        {/* Inline rather than on a second line: the rows have to be a uniform
+            height for the list to know where a dragged one lands. */}
+        {group.archived ? (
           <ThemedText type="small" style={{ color: colors.warning }}>
             archived
           </ThemedText>
-        )}
-        {requiredExerciseCount === 0 && !group.archived && (
+        ) : requiredExerciseCount === 0 ? (
           // The release valve: shown, trainable, never blocking.
           <ThemedText type="small" themeColor="textSecondary">
-            optional — never blocks the session
+            optional
           </ThemedText>
-        )}
+        ) : null}
       </Pressable>
 
       <Pressable
@@ -331,7 +326,7 @@ function GroupRow({
           ×
         </ThemedText>
       </Pressable>
-    </Pressable>
+    </View>
   );
 }
 
@@ -360,21 +355,26 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.four,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  // No horizontal padding: it belongs on each row, so a row reaches the screen
-  // edge and stays touchable the whole way across.
-  scroll: { paddingBottom: Spacing.five },
-  intro: { paddingHorizontal: Spacing.four, paddingBottom: Spacing.three, gap: Spacing.one },
-  footer: { paddingHorizontal: Spacing.four, paddingTop: Spacing.three },
+  list: { backgroundColor: 'transparent' },
+  intro: { paddingHorizontal: Spacing.four, paddingBottom: Spacing.three },
+  footer: { paddingHorizontal: Spacing.four, paddingVertical: Spacing.three },
   row: {
+    height: RowHeight,
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: MinTouchTarget,
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.four,
+    paddingLeft: Spacing.two,
+    paddingRight: Spacing.four,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  grip: { minWidth: 24 },
-  rowName: { flex: 1, minHeight: MinTouchTarget, justifyContent: 'center', gap: Spacing.half },
+  // Sized here, on the Handle itself: this is the view the gesture is attached
+  // to, so anything smaller than this is not draggable.
+  grip: {
+    width: HandleWidth,
+    height: RowHeight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowName: { flex: 1, height: RowHeight, justifyContent: 'center' },
   count: { minWidth: 24, textAlign: 'center' },
   dim: { opacity: 0.3 },
   iconButton: {
@@ -392,5 +392,4 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.three,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  note: { paddingTop: Spacing.three },
 });
