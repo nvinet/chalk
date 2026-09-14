@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { RestBar } from '@/components/rest-bar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { scaled } from '@/constants/scale';
 import { MaxContentWidth, MinTouchTarget, Spacing } from '@/constants/theme';
 import {
   exerciseById,
@@ -414,8 +415,8 @@ const styles = StyleSheet.create({
   stepper: { gap: Spacing.two },
   stepperRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   stepButton: {
-    width: 64,
-    height: 64,
+    width: scaled(64),
+    height: scaled(64),
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: Spacing.three,
@@ -423,7 +424,9 @@ const styles = StyleSheet.create({
   },
   stepValue: {
     flex: 1,
-    height: 64,
+    // The number is 32pt inside it, so the box has to grow with the text or
+    // the digits lose their descenders at the first accessibility size.
+    minHeight: scaled(64),
     textAlign: 'center',
     fontSize: 32,
     fontWeight: '700',

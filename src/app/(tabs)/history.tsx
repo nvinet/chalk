@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { scaled } from '@/constants/scale';
 import { BottomTabInset, MaxContentWidth, MinTouchTarget, Spacing } from '@/constants/theme';
 import { today as todayIso } from '@/db/ids';
 import { listExercises, listFamilies, useRecentSessions } from '@/db/repository';
@@ -359,9 +360,10 @@ const styles = StyleSheet.create({
   cell: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', minHeight: 44, gap: 2 },
   today: { textDecorationLine: 'underline' },
   badge: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    minWidth: scaled(22),
+    minHeight: scaled(22),
+    paddingHorizontal: 2,
+    borderRadius: scaled(11),
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
