@@ -95,6 +95,7 @@ export default function RootLayout() {
             <Stack.Screen name="session/[id]" />
             {/* Catalogue editors, reached from More. */}
             {/* Progress, reached from its tab. */}
+            <Stack.Screen name="progress/bests" />
             <Stack.Screen name="progress/[familyId]/index" />
             <Stack.Screen name="progress/[familyId]/[groupId]/index" />
             <Stack.Screen name="progress/[familyId]/[groupId]/[exerciseId]" />

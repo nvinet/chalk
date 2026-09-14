@@ -92,46 +92,109 @@ export interface PairingBest {
   bestSetVolumeKg: number | null;
 }
 
+/**
+ * The rule for "best", in one place (#40).
+ *
+ * `bestsForPairing` walks one pairing and `bestsAcrossPairings` walks them all
+ * in a single pass; both fold sets through this, so the tie-break cannot come
+ * to mean two different things depending on which screen asked.
+ */
+function foldBest(into: PairingBest, set: SetEntry, exercise: Exercise, date: string): void {
+  const weight = set.weightKg ?? 0;
+  const reps = set.reps ?? 0;
+
+  // Heavier always wins; at the same weight, more reps does.
+  if (
+    into.heaviestKg === null ||
+    weight > into.heaviestKg ||
+    (weight === into.heaviestKg && reps > (into.heaviestReps ?? 0))
+  ) {
+    into.heaviestKg = weight;
+    into.heaviestReps = reps;
+    into.heaviestOn = date;
+  }
+
+  const e1rm = estimatedOneRepMaxKg(reps, weight);
+  if (e1rm !== null) {
+    into.bestEstimatedOneRepMaxKg =
+      into.bestEstimatedOneRepMaxKg === null
+        ? e1rm
+        : Math.max(into.bestEstimatedOneRepMaxKg, e1rm);
+  }
+
+  const volume = setVolumeKg(set, exercise);
+  into.bestSetVolumeKg =
+    into.bestSetVolumeKg === null ? volume : Math.max(into.bestSetVolumeKg, volume);
+}
+
+function emptyBest(): PairingBest {
+  return {
+    heaviestKg: null,
+    heaviestReps: null,
+    heaviestOn: null,
+    bestEstimatedOneRepMaxKg: null,
+    bestSetVolumeKg: null,
+  };
+}
+
 /** Bests across a history, for one pairing. */
 export function bestsForPairing(
   sessions: Session[],
   pairing: Pairing,
   exercise: Exercise,
 ): PairingBest {
-  let heaviest: number | null = null;
-  let heaviestReps: number | null = null;
-  let heaviestOn: string | null = null;
-  let bestE1rm: number | null = null;
-  let bestVolume: number | null = null;
+  const best = emptyBest();
+  if (!isWeightBased(exercise.tracking)) return best;
 
   for (const session of sessions) {
     for (const set of session.sets) {
       if (!matches(set, pairing) || !isSetLogged(set, exercise.tracking)) continue;
-      if (!isWeightBased(exercise.tracking)) continue;
-
-      const weight = set.weightKg ?? 0;
-      const reps = set.reps ?? 0;
-      // Heavier always wins; at the same weight, more reps does.
-      if (heaviest === null || weight > heaviest || (weight === heaviest && reps > (heaviestReps ?? 0))) {
-        heaviest = weight;
-        heaviestReps = reps;
-        heaviestOn = session.date;
-      }
-
-      const e1rm = estimatedOneRepMaxKg(reps, weight);
-      if (e1rm !== null) bestE1rm = bestE1rm === null ? e1rm : Math.max(bestE1rm, e1rm);
-
-      const volume = setVolumeKg(set, exercise);
-      bestVolume = bestVolume === null ? volume : Math.max(bestVolume, volume);
+      foldBest(best, set, exercise, session.date);
     }
   }
-  return {
-    heaviestKg: heaviest,
-    heaviestReps,
-    heaviestOn,
-    bestEstimatedOneRepMaxKg: bestE1rm,
-    bestSetVolumeKg: bestVolume,
-  };
+  return best;
+}
+
+export interface PairingBestRow {
+  pairing: Pairing;
+  best: PairingBest;
+}
+
+/**
+ * Every pairing's bests, in one pass (#40).
+ *
+ * One walk over the sessions rather than one query per pairing: the list is
+ * every exercise he has ever used for every group it counted towards, and
+ * asking the database once per row would be dozens of reads for a screen that
+ * is a single scan of data already in hand.
+ *
+ * Cardio is absent, not empty: "heaviest" means nothing for a run (D12).
+ */
+export function bestsAcrossPairings(
+  sessions: Session[],
+  catalogue: Pick<Catalogue, "exercises">,
+): PairingBestRow[] {
+  const exercisesById = indexById(catalogue.exercises);
+  const byPairing = new Map<string, PairingBestRow>();
+
+  for (const session of sessions) {
+    for (const set of session.sets) {
+      const exercise = exercisesById.get(set.exerciseId);
+      if (!exercise || !isWeightBased(exercise.tracking)) continue;
+      if (!isSetLogged(set, exercise.tracking)) continue;
+
+      const pairing = { exerciseId: set.exerciseId, muscleGroupId: set.muscleGroupId };
+      const key = pairingKey(pairing);
+      let row = byPairing.get(key);
+      if (!row) {
+        row = { pairing, best: emptyBest() };
+        byPairing.set(key, row);
+      }
+      foldBest(row.best, set, exercise, session.date);
+    }
+  }
+
+  return [...byPairing.values()];
 }
 
 export interface NewPersonalBest {

@@ -53,6 +53,21 @@ export default function ProgressScreen() {
             walks.
           </ThemedText>
 
+          <Pressable
+            onPress={() => router.push('/progress/bests')}
+            accessibilityRole="button"
+            style={[styles.row, { borderColor: colors.border }]}>
+            <View style={styles.rowBody}>
+              <ThemedText type="smallBold">Personal bests</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                every exercise, every muscle group it counted towards
+              </ThemedText>
+            </View>
+            <ThemedText type="small" themeColor="textSecondary">
+              ›
+            </ThemedText>
+          </Pressable>
+
           {families.map(({ family, groups }) => {
             const last = lastTrained.get(family.id);
             return (

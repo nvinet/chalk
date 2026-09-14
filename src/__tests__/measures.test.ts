@@ -15,6 +15,7 @@ import {
   isSetLogged,
 } from "../domain/completion.ts";
 import {
+  bestsAcrossPairings,
   bestsForPairing,
   formatWeightReps,
   lastTimeForPairing,
@@ -443,4 +444,63 @@ test("a timed exercise has no series to chart", () => {
     rower,
   );
   assert.deepEqual(points, []);
+});
+
+// -------------------------------------------- bests across every pairing (#40)
+
+test("one pass finds the same best that one pairing at a time would", () => {
+  const history = [
+    session([set({ id: "a", reps: 8, weightKg: 80 })], { id: "s1", date: "2026-09-01" }),
+    session([set({ id: "b", reps: 5, weightKg: 90 })], { id: "s2", date: "2026-09-08" }),
+  ];
+
+  const one = bestsForPairing(history, pairing, lift);
+  const all = bestsAcrossPairings(history, { exercises: [lift] });
+
+  assert.equal(all.length, 1);
+  assert.deepEqual(all[0]?.best, one);
+});
+
+test("the same exercise under two groups is two rows, not one", () => {
+  const history = [
+    session(
+      [
+        set({ id: "a", muscleGroupId: "chest", reps: 8, weightKg: 80 }),
+        set({ id: "b", setNumber: 2, muscleGroupId: "shoulders", reps: 8, weightKg: 40 }),
+      ],
+      { id: "s1", date: "2026-09-01" },
+    ),
+  ];
+
+  const rows = bestsAcrossPairings(history, { exercises: [lift] });
+  assert.equal(rows.length, 2);
+  // Neither use counts for the other (D4).
+  const chest = rows.find((r) => r.pairing.muscleGroupId === "chest");
+  const shoulders = rows.find((r) => r.pairing.muscleGroupId === "shoulders");
+  assert.equal(chest?.best.heaviestKg, 80);
+  assert.equal(shoulders?.best.heaviestKg, 40);
+});
+
+test("cardio has no personal best row at all", () => {
+  const rows = bestsAcrossPairings(
+    [session([set({ id: "r", exerciseId: "rower", durationSeconds: 900 })])],
+    { exercises: [lift, rower] },
+  );
+  assert.deepEqual(rows, []);
+});
+
+test("a warm-up is never anybody's personal best", () => {
+  const rows = bestsAcrossPairings(
+    [
+      session(
+        [
+          set({ id: "w", reps: 3, weightKg: 300, warmup: true }),
+          set({ id: "x", setNumber: 2, reps: 8, weightKg: 80 }),
+        ],
+        { id: "s1", date: "2026-09-01" },
+      ),
+    ],
+    { exercises: [lift] },
+  );
+  assert.equal(rows[0]?.best.heaviestKg, 80);
 });
