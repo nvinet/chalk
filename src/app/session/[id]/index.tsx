@@ -12,9 +12,7 @@ import {
   abandonSession,
   finishSession,
   listExercises,
-  listFamilies,
   listMuscleGroups,
-  muscleGroupsForFamily,
   skipMuscleGroup,
   unskipMuscleGroup,
   useSession,
@@ -50,8 +48,6 @@ export default function SessionScreen() {
   // conditional on having found a session.
   const rest = useCurrentRest();
 
-  // The side door is shut by default (D24).
-  const [picking, setPicking] = useState(false);
 
   // The catalogue does not change during a session, so it is read once.
   const catalogue = useMemo(() => {
@@ -60,14 +56,6 @@ export default function SessionScreen() {
       exercises,
       exercisesById: indexById(exercises),
       groupNames: new Map(listMuscleGroups().map((g) => [g.id, g.name])),
-      // Every family's groups, for the side door. Read once with the rest of
-      // the catalogue: it does not change during a session either.
-      groupsByFamily: listFamilies().map((family) => ({
-        family,
-        groups: muscleGroupsForFamily(family.id)
-          .map((r) => r.group)
-          .filter((g) => !g.implicit && !g.archived),
-      })),
     };
   }, []);
 
@@ -171,15 +159,6 @@ export default function SessionScreen() {
     }))
     .filter((visitor) => visitor.sets > 0);
 
-  // Groups he could train that are not this session's. The side door stays
-  // shut until asked for: the session's own groups are the path N4 protects,
-  // and this must not become a step on it.
-  const elsewhere = catalogue.groupsByFamily
-    .map(({ family, groups }) => ({
-      family,
-      groups: groups.filter((g) => !requiredIds.has(g.id)),
-    }))
-    .filter(({ groups }) => groups.length > 0);
 
   return (
     <ThemedView style={styles.container}>
@@ -287,41 +266,24 @@ export default function SessionScreen() {
             </>
           )}
 
-          {/* The side door (D24). A session keeps its family, so this is not a
-              step on the path to a machine — that stays two taps — but nothing
-              should require ending a session to train something else. */}
+          {/* The side door (D24). A button, because it does something — the
+              plain link it replaced read as a label. It opens a screen rather
+              than unfolding in place: this screen is already long, and pushing
+              the session's own groups around to make room buries the thing he
+              came back to look at. */}
           <Pressable
-            onPress={() => setPicking((open) => !open)}
+            onPress={() =>
+              router.push({ pathname: '/session/[id]/elsewhere', params: { id: session.id } })
+            }
             accessibilityRole="button"
-            style={styles.elsewhereToggle}>
-            <ThemedText type="link">
-              {picking ? 'Never mind' : 'Train something else'}
+            style={[styles.elsewhere, { borderColor: colors.border }]}>
+            <ThemedText type="smallBold" style={styles.elsewhereLabel}>
+              Train something else
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              ›
             </ThemedText>
           </Pressable>
-
-          {picking &&
-            elsewhere.map(({ family, groups }) => (
-              <View key={family.id} style={styles.elsewhereFamily}>
-                <ThemedText type="code" style={styles.optionalHeading}>
-                  {family.name.toLowerCase()}
-                </ThemedText>
-                {groups.map((group) => (
-                  <Pressable
-                    key={group.id}
-                    onPress={() => {
-                      setPicking(false);
-                      openGroup(session.id, group.id);
-                    }}
-                    accessibilityRole="button"
-                    style={[styles.visitorRow, { borderColor: colors.border }]}>
-                    <ThemedText style={styles.visitorName}>{group.name}</ThemedText>
-                    <ThemedText type="small" themeColor="textSecondary">
-                      ›
-                    </ThemedText>
-                  </Pressable>
-                ))}
-              </View>
-            ))}
 
           {/* The end of the list is where the session ends. Finishing is a
               button because it is the ordinary way out; abandoning stays a
@@ -528,8 +490,16 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   visitorName: { flex: 1 },
-  elsewhereToggle: { minHeight: MinTouchTarget, justifyContent: 'center' },
-  elsewhereFamily: { gap: Spacing.one },
+  elsewhereLabel: { flex: 1 },
+  elsewhere: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: Spacing.four,
+    minHeight: 52,
+    paddingHorizontal: Spacing.four,
+    borderRadius: Spacing.four,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
   optionalHeading: { textTransform: 'uppercase', marginTop: Spacing.three },
   cta: {
     margin: Spacing.four,
