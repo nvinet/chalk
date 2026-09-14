@@ -9,6 +9,7 @@ import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import * as SQLite from 'expo-sqlite';
 
+import { ExportCsvRow } from '@/components/export-csv';
 import { appliedMigrationCount, catalogueCounts, DATABASE_NAME } from '@/db';
 import { checkDatabaseHealth } from '@/db/health';
 import { listMuscleGroups } from '@/db/repository';
@@ -121,6 +122,14 @@ export default function MoreScreen() {
           <ThemedText type="code" style={styles.path}>
             {String(SQLite.defaultDatabaseDirectory ?? 'unknown')}/{DATABASE_NAME}
           </ThemedText>
+
+          {/* The only way data leaves the app, now that the JSON backup is
+              dropped (D27). For reading elsewhere, not for restoring. */}
+          <ExportCsvRow />
+          <ThemedText type="small" themeColor="textSecondary">
+            One row per set, with the exercise and the muscle group it counted towards.
+            For reading in a spreadsheet — restoring is what the backup above is for.
+          </ThemedText>
         </ThemedView>
 
         <ThemedText type="code" style={styles.heading}>
@@ -128,7 +137,6 @@ export default function MoreScreen() {
         </ThemedText>
         <ThemedView type="backgroundElement" style={styles.card}>
           <HintRow title="Settings" hint={<ThemedText type="small">#48</ThemedText>} />
-          <HintRow title="Export" hint={<ThemedText type="small">#30</ThemedText>} />
         </ThemedView>
       </SafeAreaView>
     </ThemedView>
