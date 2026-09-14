@@ -25,6 +25,7 @@ import {
   familyMuscleGroups,
   muscleGroups,
   sessionRequirements,
+  sessions,
   setEntries,
 } from '../schema';
 
@@ -187,6 +188,57 @@ export function createFamily(name: string): Id {
   });
 
   return id;
+}
+
+/**
+ * What a family would take with it (#69).
+ *
+ * Counted through its sessions rather than its muscle groups: a group can be
+ * moved, but a logged session belongs to the family it was trained as.
+ */
+export function familyUsage(id: Id): Usage {
+  return {
+    sets:
+      db
+        .select({ n: count() })
+        .from(setEntries)
+        .innerJoin(sessions, eq(sessions.id, setEntries.sessionId))
+        .where(eq(sessions.familyId, id))
+        .get()?.n ?? 0,
+    sessions:
+      db.select({ n: count() }).from(sessions).where(eq(sessions.familyId, id)).get()?.n ?? 0,
+  };
+}
+
+/** How many muscle groups a family still holds. Deleting one is refused while it has any. */
+export function familyMuscleGroupCount(id: Id): number {
+  return (
+    db
+      .select({ n: count() })
+      .from(familyMuscleGroups)
+      .where(eq(familyMuscleGroups.familyId, id))
+      .get()?.n ?? 0
+  );
+}
+
+/**
+ * Archiving keeps the row, so a session that names this family still resolves
+ * and reads exactly the same afterwards.
+ */
+export function setFamilyArchived(id: Id, archived: boolean): void {
+  db.update(families).set({ archived }).where(eq(families.id, id)).run();
+}
+
+/**
+ * Only when `familyUsage` is unused *and* the family holds no muscle groups.
+ *
+ * The second condition is not a foreign key, it is a judgement: deleting a
+ * family could cascade into its groups, and a group belongs to exactly one
+ * family — so the cascade would silently destroy things a level further away
+ * than the row that was swiped. Emptying it first makes that explicit.
+ */
+export function deleteFamily(id: Id): void {
+  db.delete(families).where(eq(families.id, id)).run();
 }
 
 /**

@@ -1,13 +1,21 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CatalogueAddField, CatalogueHeader } from '@/components/catalogue-header';
+import { SwipeToDelete } from '@/components/swipe-to-delete';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, MinTouchTarget, Spacing } from '@/constants/theme';
-import { createExercise, useExercises } from '@/db/repository';
+import {
+  createExercise,
+  deleteExercise,
+  exerciseUsage,
+  isUsed,
+  setExerciseArchived,
+  useExercises,
+} from '@/db/repository';
 import { searchExercises } from '@/domain/search';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -35,6 +43,32 @@ export default function ExercisesScreen() {
     setNewName('');
     setAdding(false);
     router.push({ pathname: '/catalogue/exercise/[id]', params: { id } });
+  };
+
+  /**
+   * Archive when something refers to it, delete when nothing does — the same
+   * rule as the other two lists, and the same one the editor applies. Deleting
+   * from here saves opening the editor to throw a row away.
+   */
+  const remove = (exercise: { id: string; name: string }) => {
+    const usage = exerciseUsage(exercise.id);
+
+    if (isUsed(usage)) {
+      Alert.alert(
+        `Archive ${exercise.name}?`,
+        `It appears in ${usage.sessions} logged ${usage.sessions === 1 ? 'session' : 'sessions'}, so it cannot be deleted without losing that history. Archiving hides it from new sessions and leaves the past untouched.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Archive', onPress: () => setExerciseArchived(exercise.id, true) },
+        ],
+      );
+      return;
+    }
+
+    Alert.alert(`Delete ${exercise.name}?`, 'Nothing has been logged against it.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteExercise(exercise.id) },
+    ]);
   };
 
   return (
@@ -73,26 +107,30 @@ export default function ExercisesScreen() {
           </ThemedText>
 
           {matches.map((exercise) => (
-            <Pressable
+            <SwipeToDelete
               key={exercise.id}
-              onPress={() =>
-                router.push({ pathname: '/catalogue/exercise/[id]', params: { id: exercise.id } })
-              }
-              accessibilityRole="button"
-              style={[styles.row, { borderColor: colors.border }]}>
-              <View style={styles.rowBody}>
-                <ThemedText>
-                  {exercise.name}
-                  {exercise.archived ? ' · archived' : ''}
-                </ThemedText>
+              accessibilityLabel={`Delete ${exercise.name}`}
+              onDelete={() => remove(exercise)}>
+              <Pressable
+                onPress={() =>
+                  router.push({ pathname: '/catalogue/exercise/[id]', params: { id: exercise.id } })
+                }
+                accessibilityRole="button"
+                style={[styles.row, { borderColor: colors.border }]}>
+                <View style={styles.rowBody}>
+                  <ThemedText>
+                    {exercise.name}
+                    {exercise.archived ? ' · archived' : ''}
+                  </ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {trackingLabel(exercise.tracking)}
+                  </ThemedText>
+                </View>
                 <ThemedText type="small" themeColor="textSecondary">
-                  {trackingLabel(exercise.tracking)}
+                  ›
                 </ThemedText>
-              </View>
-              <ThemedText type="small" themeColor="textSecondary">
-                ›
-              </ThemedText>
-            </Pressable>
+              </Pressable>
+            </SwipeToDelete>
           ))}
         </ScrollView>
       </SafeAreaView>

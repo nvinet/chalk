@@ -1,6 +1,6 @@
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import {
   Sortable,
   SortableItem,
@@ -9,14 +9,20 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CatalogueAddField, CatalogueHeader } from '@/components/catalogue-header';
+import { SwipeToDelete } from '@/components/swipe-to-delete';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import {
   createFamily,
+  deleteFamily,
+  familyMuscleGroupCount,
+  familyUsage,
+  isUsed,
   listFamilies,
   muscleGroupsForFamily,
   reorderFamilies,
+  setFamilyArchived,
 } from '@/db/repository';
 import type { Family } from '@/domain/types';
 import { useTheme } from '@/hooks/use-theme';
@@ -59,6 +65,59 @@ export default function FamiliesScreen() {
     setRows(read());
   };
 
+  /**
+   * Archive when something refers to it, delete when nothing does — the same
+   * rule the muscle groups screen has always used.
+   *
+   * A family holding muscle groups is refused rather than cascaded: a group
+   * belongs to exactly one family, so deleting the family would destroy rows a
+   * level further away than the one swiped.
+   */
+  const remove = (row: Row) => {
+    const { id, name } = row.family;
+    const usage = familyUsage(id);
+
+    if (isUsed(usage)) {
+      Alert.alert(
+        `Archive ${name}?`,
+        `It has ${usage.sessions} logged ${usage.sessions === 1 ? 'session' : 'sessions'}, so it cannot be deleted without losing that history. Archiving hides it from new sessions and leaves the past untouched.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Archive',
+            onPress: () => {
+              setFamilyArchived(id, true);
+              setRows(read());
+            },
+          },
+        ],
+      );
+      return;
+    }
+
+    const groups = familyMuscleGroupCount(id);
+    if (groups > 0) {
+      Alert.alert(
+        `${name} still has ${groups} muscle ${groups === 1 ? 'group' : 'groups'}`,
+        'Remove them on the muscle groups screen first, so nothing is deleted that is not in front of you.',
+        [{ text: 'OK' }],
+      );
+      return;
+    }
+
+    Alert.alert(`Delete ${name}?`, 'Nothing has been logged against it.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          deleteFamily(id);
+          setRows(read());
+        },
+      },
+    ]);
+  };
+
   const renderItem = useCallback((props: SortableRenderItemProps<Row>) => {
     const { item, id, ...rest } = props;
     return (
@@ -68,9 +127,15 @@ export default function FamiliesScreen() {
         data={item}
         {...rest}
         onDrop={(_dropped, _position, all) => reorderFamilies(orderedIds(all))}>
-        <FamilyRow row={item} />
+        <SwipeToDelete accessibilityLabel={`Delete ${item.family.name}`} onDelete={() => remove(item)}>
+          <FamilyRow row={item} />
+        </SwipeToDelete>
       </SortableItem>
     );
+    // `remove` is captured once on purpose. It reads the database on every
+    // call and `setRows` is stable, so a stale closure cannot go stale in any
+    // way that matters — and re-creating this would re-key the sortable list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

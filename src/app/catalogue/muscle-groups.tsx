@@ -9,6 +9,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CatalogueAddField, CatalogueHeader } from '@/components/catalogue-header';
+import { SwipeToDelete } from '@/components/swipe-to-delete';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, MinTouchTarget, Spacing } from '@/constants/theme';
@@ -138,15 +139,18 @@ export default function MuscleGroupsScreen() {
           onDrop={(_dropped, _position, all2) =>
             reorderFamilyMuscleGroups(familyId, orderedIds(all2))
           }>
-          <GroupRow
-            row={item}
-            onRename={() => rename(item.group)}
-            onRemove={() => remove(item.group)}
-            onRequired={(next) => {
-              setRequiredExerciseCount(familyId, item.group.id, next);
-              setTick((n) => n + 1);
-            }}
-          />
+          <SwipeToDelete
+            accessibilityLabel={`Delete ${item.group.name}`}
+            onDelete={() => remove(item.group)}>
+            <GroupRow
+              row={item}
+              onRename={() => rename(item.group)}
+              onRequired={(next) => {
+                setRequiredExerciseCount(familyId, item.group.id, next);
+                setTick((n) => n + 1);
+              }}
+            />
+          </SwipeToDelete>
         </SortableItem>
       );
     },
@@ -230,12 +234,10 @@ export default function MuscleGroupsScreen() {
 function GroupRow({
   row,
   onRename,
-  onRemove,
   onRequired,
 }: {
   row: FamilyMuscleGroupView;
   onRename: () => void;
-  onRemove: () => void;
   onRequired: (next: number) => void;
 }) {
   const colors = useTheme();
@@ -290,16 +292,6 @@ function GroupRow({
         accessibilityLabel={`More exercises for ${group.name}`}
         style={styles.iconButton}>
         <ThemedText type="link">+</ThemedText>
-      </Pressable>
-
-      <Pressable
-        onPress={onRemove}
-        accessibilityRole="button"
-        accessibilityLabel={`Remove ${group.name}`}
-        style={styles.iconButton}>
-        <ThemedText type="small" style={{ color: colors.warning }}>
-          ×
-        </ThemedText>
       </Pressable>
     </View>
   );
