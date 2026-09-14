@@ -123,6 +123,39 @@ export function weekAdherence(
     .filter((row) => row.target > 0 || row.attended > 0);
 }
 
+/**
+ * Did this week follow the plan? (#35)
+ *
+ * Every planned family reached the number of days it was given. Attendance,
+ * not success — the plan is about turning up on the days it says (C3), and a
+ * week where he trained everything he meant to but had a bad chest day is a
+ * week he followed the plan.
+ *
+ * **A week with no plan cannot meet it.** Not "trivially met": there was
+ * nothing to meet, and counting it as a success would make the summary flatter
+ * itself over every week before he wrote a plan at all.
+ */
+export function weekMetPlan(rows: WeekAdherence[]): boolean {
+  const planned = rows.filter((row) => row.target > 0);
+  if (planned.length === 0) return false;
+  return planned.every((row) => row.attended >= row.target);
+}
+
+/**
+ * Consecutive weeks meeting the plan, counting back from the most recent (#35).
+ *
+ * `weeks` runs oldest to newest, as a week list is naturally built; the streak
+ * is read from the other end. The first miss ends it.
+ */
+export function planStreak(weeks: boolean[]): number {
+  let streak = 0;
+  for (let i = weeks.length - 1; i >= 0; i -= 1) {
+    if (!weeks[i]) break;
+    streak += 1;
+  }
+  return streak;
+}
+
 /** How many sessions each family has had this week. Families with none read 0. */
 export function countsByFamily(
   families: Family[],

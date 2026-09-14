@@ -11,17 +11,21 @@ import {
   listExercises,
   listFamilies,
   setScheduledFamily,
+  setSetting,
   useRecentSessions,
+  useSetting,
   useWeeklySchedule,
   type DayOfWeek,
 } from '@/db/repository';
 import { evaluateSession } from '@/domain/completion';
 import {
+  planStreak,
   sessionsInWeek,
   shiftWeek,
   startOfWeek,
   weekAdherence,
   weekDates,
+  weekMetPlan,
 } from '@/domain/planning';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -68,6 +72,30 @@ export default function PlanScreen() {
       successfulIds,
     };
   }, [weekStart, sessions, schedule, families, exercises]);
+
+  /**
+   * The last twelve weeks, met or not (#35).
+   *
+   * Twelve because a quarter is long enough to show a habit and short enough
+   * that a bad month still reads as recoverable.
+   */
+  const history = useMemo(() => {
+    const thisWeekStart = startOfWeek(todayIso());
+    const weeks = Array.from({ length: 12 }, (_, i) => shiftWeek(thisWeekStart, i - 11));
+    const met = weeks.map((start) => {
+      const inWeek = sessionsInWeek(sessions, start);
+      const successfulIds = new Set(
+        inWeek.filter((s) => evaluateSession(s, { exercises }).successful).map((s) => s.id),
+      );
+      return weekMetPlan(weekAdherence(families, schedule, inWeek, successfulIds));
+    });
+    return { weeks, met, streak: planStreak(met), total: met.filter(Boolean).length };
+  }, [sessions, schedule, families, exercises]);
+
+  // Q19 is unanswered: a streak motivates some people and pressures others.
+  // So the plain count is always shown and the streak is opt-in, which is what
+  // "keep it removable" has to mean if it is to mean anything.
+  const streakOn = useSetting('plan.showStreak') === 'true';
 
   const familyName = (id: string | null) =>
     id === null ? 'Rest' : (families.find((f) => f.id === id)?.name ?? id);
@@ -196,10 +224,42 @@ export default function PlanScreen() {
             ))
           )}
 
+          <ThemedText type="code" style={styles.heading}>
+            over twelve weeks
+          </ThemedText>
+
+          <ThemedText type="small">
+            {history.total} of the last 12 weeks followed the plan.
+          </ThemedText>
+
+          {streakOn ? (
+            <>
+              <ThemedText type="small">
+                {history.streak === 0
+                  ? 'No run going right now.'
+                  : `${history.streak} ${history.streak === 1 ? 'week' : 'weeks'} in a row.`}
+              </ThemedText>
+              <Pressable
+                onPress={() => setSetting('plan.showStreak', 'false')}
+                accessibilityRole="button"
+                style={styles.streakToggle}>
+                <ThemedText type="link">Hide the streak</ThemedText>
+              </Pressable>
+            </>
+          ) : (
+            <Pressable
+              onPress={() => setSetting('plan.showStreak', 'true')}
+              accessibilityRole="button"
+              style={styles.streakToggle}>
+              <ThemedText type="link">Show a streak</ThemedText>
+            </Pressable>
+          )}
+
           <ThemedText type="small" themeColor="textSecondary" style={styles.note}>
             A session counts towards the week as soon as anything is logged, whether or
             not every muscle group was met. Turning up and succeeding are different
-            things, so both are shown.
+            things, so both are shown. A week with no plan does not count as followed —
+            there was nothing to follow.
           </ThemedText>
         </ScrollView>
       </SafeAreaView>
@@ -247,5 +307,6 @@ const styles = StyleSheet.create({
   },
   rowName: { flex: 1 },
   rowMet: { minWidth: 56, textAlign: 'right' },
+  streakToggle: { minHeight: MinTouchTarget, justifyContent: 'center' },
   note: { paddingTop: Spacing.three },
 });

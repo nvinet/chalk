@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import {
   countsByFamily,
   lastSessionByFamily,
+  planStreak,
   sessionsInWeek,
   sessionsThisWeek,
   shiftWeek,
@@ -13,6 +14,7 @@ import {
   suggestFamily,
   weekAdherence,
   weekDates,
+  weekMetPlan,
 } from "../domain/planning.ts";
 import type { Family, Session } from "../domain/types.ts";
 
@@ -248,3 +250,47 @@ function sessionOn(familyId: string, date: string): Session {
     sets: [],
   };
 }
+
+// -------------------------------------- weeks meeting the plan, and runs (#35)
+
+test("a week with no plan does not count as followed", () => {
+  // Nothing planned, nothing trained: there was nothing to follow.
+  assert.equal(weekMetPlan([]), false);
+  // Trained, but against no plan — still not "followed the plan".
+  assert.equal(
+    weekMetPlan([{ familyId: "legs", target: 0, attended: 2, successful: 2 }]),
+    false,
+  );
+});
+
+test("following the plan is attendance, not success (C3)", () => {
+  // Turned up both planned days; met neither. The plan was still followed.
+  assert.equal(
+    weekMetPlan([{ familyId: "push", target: 2, attended: 2, successful: 0 }]),
+    true,
+  );
+});
+
+test("every planned family has to reach its own target", () => {
+  const rows = [
+    { familyId: "push", target: 2, attended: 2, successful: 2 },
+    { familyId: "pull", target: 1, attended: 0, successful: 0 },
+  ];
+  assert.equal(weekMetPlan(rows), false);
+});
+
+test("an unplanned extra does not break a followed week", () => {
+  const rows = [
+    { familyId: "push", target: 2, attended: 2, successful: 2 },
+    { familyId: "legs", target: 0, attended: 1, successful: 0 },
+  ];
+  assert.equal(weekMetPlan(rows), true);
+});
+
+test("a streak counts back from the most recent week and stops at the first miss", () => {
+  // Oldest first, as the week list is built.
+  assert.equal(planStreak([true, false, true, true, true]), 3);
+  assert.equal(planStreak([true, true, false]), 0);
+  assert.equal(planStreak([]), 0);
+  assert.equal(planStreak([true]), 1);
+});
