@@ -496,6 +496,41 @@ setting rather than a rebuild, and turning it on is a deliberate act.
 **Do not flip the default.** It is not an oversight or a placeholder; the
 default *is* the decision. If it ever changes it should change here first.
 
+### D27 — Backup is the device backup; there is no JSON export
+Agreed 14 Sep 2026 (issue #44, dropped). The database already goes to iCloud
+without a line of code, and a second mechanism that duplicated it would earn
+its keep only in cases that do not apply here.
+
+`expo-sqlite` puts the file at **`<app container>/Documents/SQLite/chalk.db`**
+on iOS — traced through the module's own source, since the documentation does
+not say. The `Caches` branch beside it is `#if os(tvOS)`, which matters: a
+database in `Caches` would be neither backed up nor guaranteed to survive.
+`Documents` is included in the iCloud device backup by default, nothing in this
+app sets `NSURLIsExcludedFromBackupKey`, and nothing overrides the directory.
+
+**A device restore therefore returns the actual SQLite file**, which is a
+stronger round-trip than a JSON export: it is the database, not a
+re-serialisation of it, so there is no mapping to get wrong and no format to
+keep in step with the schema.
+
+**What is knowingly given up**, because it is the honest half of this:
+
+- iCloud Backup has to be switched on, with space for it.
+- A device restore is all-or-nothing. It cannot bring back one bad session, and
+  it cannot be used on a device that is not being wiped.
+- There is no copy he holds himself, independent of Apple.
+
+Accepted because none of those is the failure this app is guarding against.
+The risk was losing a year of training to a lost phone, and the device backup
+covers exactly that.
+
+**This raises the stakes on CSV export (#30).** It is now the only way data
+leaves the app at all, so its own argument — there must always be a way out
+from the moment real data goes in — is the whole of it rather than one of two.
+
+Revisit if a backup he controls is ever wanted for its own sake, or if
+restoring a single session becomes a real need rather than a hypothetical one.
+
 ## Open — ask, do not guess
 
 | | Question | Blocks |
