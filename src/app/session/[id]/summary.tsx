@@ -1,5 +1,5 @@
-import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -42,8 +42,17 @@ export default function SummaryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useTheme();
 
-  // Read once. A finished session does not change underneath the screen that
-  // is reporting on it.
+  /**
+   * Re-read whenever the screen is focused (#42).
+   *
+   * It used to read once, on the reasoning that a finished session does not
+   * change underneath the screen reporting on it. That stopped being true the
+   * moment a set became editable from here: correcting one and coming back
+   * would have shown the old number, and the verdict computed from it.
+   */
+  const [readAt, setReadAt] = useState(0);
+  useFocusEffect(useCallback(() => setReadAt(Date.now()), []));
+
   const data = useMemo(() => {
     const session = getSession(id);
     if (!session) return null;
@@ -69,7 +78,8 @@ export default function SummaryScreen() {
         exercisesById,
       ),
     };
-  }, [id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, readAt]);
 
   const [notes, setNotes] = useState(() => data?.session.notes ?? '');
 
@@ -223,19 +233,34 @@ export default function SummaryScreen() {
                       </ThemedText>
                     ) : null}
 
+                    {/* Tappable, because the app is a notebook and a number
+                        typed wrong has to be fixable later (#42). */}
                     {entry.sets.map((set, index) => (
-                      <View key={set.id} style={styles.loggedSet}>
+                      <Pressable
+                        key={set.id}
+                        onPress={() =>
+                          router.push({
+                            pathname: '/session/[id]/set/[setId]',
+                            params: { id: session.id, setId: set.id },
+                          })
+                        }
+                        accessibilityRole="button"
+                        accessibilityLabel={`Edit set ${index + 1} of ${exercise?.name ?? ''}`}
+                        style={styles.loggedSet}>
                         <ThemedText
                           type="small"
                           themeColor="textSecondary"
                           style={styles.loggedSetNumber}>
                           {index + 1}
                         </ThemedText>
-                        <ThemedText type="small">
+                        <ThemedText type="small" style={styles.loggedSetValue}>
                           {describeSet(set, exercise?.tracking ?? 'weightReps')}
                           {set.warmup ? ' · warm-up' : ''}
                         </ThemedText>
-                      </View>
+                        <ThemedText type="small" themeColor="textSecondary">
+                          ›
+                        </ThemedText>
+                      </Pressable>
                     ))}
                   </View>
                 );
@@ -406,7 +431,13 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   loggedHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  loggedSet: { flexDirection: 'row', gap: Spacing.three, alignItems: 'baseline' },
+  loggedSet: {
+    flexDirection: 'row',
+    gap: Spacing.three,
+    alignItems: 'center',
+    minHeight: MinTouchTarget,
+  },
+  loggedSetValue: { flex: 1 },
   loggedSetNumber: { minWidth: 16 },
   notes: {
     minHeight: 96,

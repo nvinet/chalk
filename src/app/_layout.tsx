@@ -93,6 +93,7 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" />
             {/* A session covers the tabs: it is a mode, not a destination. */}
             <Stack.Screen name="session/[id]" />
+            <Stack.Screen name="session/[id]/set/[setId]" />
             {/* Catalogue editors, reached from More. */}
             {/* Progress, reached from its tab. */}
             <Stack.Screen name="progress/bests" />

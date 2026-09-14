@@ -395,6 +395,33 @@ export function logSet(
 }
 
 /**
+ * Corrects a set that was already logged (#42).
+ *
+ * The app is a notebook, not a form: a number typed wrong in August has to be
+ * fixable in September. Only the measures change — the set keeps its id, its
+ * session, its pairing and its number, because those are what it *was*, and
+ * moving a set between sessions or groups would be writing a different history
+ * rather than correcting this one.
+ *
+ * The session's verdict needs no recomputing here. It is derived by
+ * `evaluateSession` from the requirements snapshotted at start (#19), so the
+ * next read is already correct — which is the same reason a visiting set can
+ * never change an outcome (D24).
+ */
+export function updateSet(id: Id, input: SetInput): void {
+  db.update(setEntries)
+    .set({
+      reps: input.reps ?? null,
+      weightKg: input.weightKg ?? null,
+      durationSeconds: input.durationSeconds ?? null,
+      distanceM: input.distanceM ?? null,
+      warmup: input.warmup ?? false,
+    })
+    .where(eq(setEntries.id, id))
+    .run();
+}
+
+/**
  * Removes a set. Earlier numbers are left alone rather than renumbered —
  * a gap is honest about what happened, and renumbering would rewrite history
  * he did not ask to change.
