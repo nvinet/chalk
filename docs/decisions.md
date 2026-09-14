@@ -475,6 +475,27 @@ current styling as a design to be consistent with. Do treat the *behaviour* as
 settled — the rules, the counting, the navigation — because that is what every
 decision above is about.
 
+### D26 — Streaks are opt-in, and off until asked for
+Agreed 14 Sep 2026 (issue #35, answering Q19). Q19 asked whether to show a
+streak at all: they motivate some people and pressure others, and #35 carried
+the question forward as "keep it removable" rather than settle it.
+
+**The answer is opt-in, off by default.** "Removable" only means something if
+the thing is genuinely absent until asked for — a streak you have to find and
+switch off has already done its pressuring by the time you find it.
+
+**The adherence count is not part of this and is always shown.** How many of
+the last twelve weeks followed the plan is a fact about what happened, not a
+score to protect: it does not reset, it does not shame a missed week, and it
+reads the same whether the last week was good or bad. Only the *run* — the
+thing that breaks — is optional.
+
+Stored as `plan.showStreak` in the settings bag, so turning it off is a
+setting rather than a rebuild, and turning it on is a deliberate act.
+
+**Do not flip the default.** It is not an oversight or a placeholder; the
+default *is* the decision. If it ever changes it should change here first.
+
 ## Open — ask, do not guess
 
 | | Question | Blocks |

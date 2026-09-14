@@ -154,3 +154,7 @@ The screens are wireframes on purpose (D25). Styling is M6's job, so a sparse
 screen is not unfinished work — and `expo-glass-effect`, `@expo/ui`,
 `expo-device` and `expo-font` are unused on purpose, kept for that pass. Do not
 remove them, and do not treat the current styling as a design to match.
+
+Streaks are opt-in and off by default (D26, answering Q19). The adherence count
+is always shown; only the run that can break is optional. The default is the
+decision — do not flip it.
