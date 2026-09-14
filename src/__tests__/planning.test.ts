@@ -6,9 +6,13 @@ import assert from "node:assert/strict";
 import {
   countsByFamily,
   lastSessionByFamily,
+  sessionsInWeek,
   sessionsThisWeek,
+  shiftWeek,
   startOfWeek,
   suggestFamily,
+  weekAdherence,
+  weekDates,
 } from "../domain/planning.ts";
 import type { Family, Session } from "../domain/types.ts";
 
@@ -146,3 +150,101 @@ test("last done ignores an abandoned session in favour of a real one", () => {
   ]);
   assert.equal(latest.get("push")?.date, "2026-09-01");
 });
+
+// ------------------------------------------ the weekly plan and adherence (#33)
+
+test("a week runs Monday to Sunday and shifts both ways", () => {
+  const monday = startOfWeek("2026-09-10"); // a Thursday
+  assert.equal(monday, "2026-09-07");
+  assert.deepEqual(weekDates(monday), [
+    "2026-09-07",
+    "2026-09-08",
+    "2026-09-09",
+    "2026-09-10",
+    "2026-09-11",
+    "2026-09-12",
+    "2026-09-13",
+  ]);
+  assert.equal(shiftWeek(monday, -1), "2026-08-31");
+  assert.equal(shiftWeek(monday, 1), "2026-09-14");
+});
+
+test("a target is derived from the days given to a family, not stored", () => {
+  const push = { id: "push", name: "Push", position: 1, usesMuscleGroups: true };
+  const pull = { id: "pull", name: "Pull", position: 2, usesMuscleGroups: true };
+  // Push twice a week, pull once, the rest are rest days.
+  const schedule = new Map<number, string | null>([
+    [0, "push"],
+    [1, null],
+    [2, "pull"],
+    [3, "push"],
+    [4, null],
+    [5, null],
+    [6, null],
+  ]);
+
+  const rows = weekAdherence([push, pull], schedule, [], new Set());
+  assert.equal(rows.find((r) => r.familyId === "push")?.target, 2);
+  assert.equal(rows.find((r) => r.familyId === "pull")?.target, 1);
+});
+
+test("attendance and success are counted separately (C3)", () => {
+  const push = { id: "push", name: "Push", position: 1, usesMuscleGroups: true };
+  const schedule = new Map<number, string | null>([[0, "push"], [3, "push"]]);
+
+  const attended = [
+    { ...sessionOn("push", "2026-09-07"), id: "good" },
+    { ...sessionOn("push", "2026-09-10"), id: "poor" },
+  ];
+
+  // Both turned up; only one met its groups.
+  const rows = weekAdherence([push], schedule, attended, new Set(["good"]));
+  const row = rows[0];
+  assert.equal(row?.target, 2);
+  assert.equal(row?.attended, 2);
+  assert.equal(row?.successful, 1);
+});
+
+test("a family neither planned nor trained is not a row", () => {
+  const push = { id: "push", name: "Push", position: 1, usesMuscleGroups: true };
+  const legs = { id: "legs", name: "Legs", position: 3, usesMuscleGroups: true };
+  const schedule = new Map<number, string | null>([[0, "push"]]);
+
+  const rows = weekAdherence([push, legs], schedule, [], new Set());
+  assert.deepEqual(rows.map((r) => r.familyId), ["push"]);
+});
+
+test("an unplanned session still shows, so the week is not a lie", () => {
+  const legs = { id: "legs", name: "Legs", position: 3, usesMuscleGroups: true };
+  const rows = weekAdherence(
+    [legs],
+    new Map<number, string | null>(),
+    [sessionOn("legs", "2026-09-09")],
+    new Set(),
+  );
+  assert.equal(rows[0]?.target, 0);
+  assert.equal(rows[0]?.attended, 1);
+});
+
+test("only the sessions of that week are counted", () => {
+  const all = [
+    sessionOn("push", "2026-09-06"), // the Sunday before
+    sessionOn("push", "2026-09-07"), // Monday
+    sessionOn("push", "2026-09-13"), // Sunday
+    sessionOn("push", "2026-09-14"), // the Monday after
+  ];
+  const inWeek = sessionsInWeek(all, "2026-09-07");
+  assert.deepEqual(inWeek.map((s) => s.date), ["2026-09-07", "2026-09-13"]);
+});
+
+function sessionOn(familyId: string, date: string): Session {
+  return {
+    id: `${familyId}-${date}`,
+    familyId,
+    date,
+    startedAt: `${date}T18:00:00Z`,
+    status: "finished",
+    requirements: [],
+    sets: [],
+  };
+}

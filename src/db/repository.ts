@@ -9,4 +9,5 @@
  */
 
 export * from './repository/catalogue.ts';
+export * from './repository/plan.ts';
 export * from './repository/sessions.ts';
