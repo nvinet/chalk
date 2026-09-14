@@ -7,7 +7,9 @@ import { HintRow } from '@/components/hint-row';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { appliedMigrationCount, catalogueCounts } from '@/db';
+import * as SQLite from 'expo-sqlite';
+
+import { appliedMigrationCount, catalogueCounts, DATABASE_NAME } from '@/db';
 import { checkDatabaseHealth } from '@/db/health';
 import { listMuscleGroups } from '@/db/repository';
 
@@ -95,6 +97,32 @@ export default function MoreScreen() {
           </Pressable>
         </ThemedView>
 
+        {/* Where the data is, and what is looking after it (#43). */}
+        <ThemedText type="code" style={styles.heading}>
+          your data
+        </ThemedText>
+        <ThemedView type="backgroundElement" style={styles.card}>
+          <HintRow
+            title="Included in your iPhone backup"
+            hint={<ThemedText type="small">iCloud</ThemedText>}
+          />
+          <ThemedText type="small" themeColor="textSecondary">
+            Everything lives in one SQLite file inside the app&apos;s Documents folder,
+            which iOS includes in the device backup. Restoring this iPhone — or a new one
+            — from that backup brings the file back exactly as it was. There is no
+            account and no server; it is your iCloud, not ours.
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            Two things to know. It needs iCloud Backup switched on in Settings, with room
+            for it. And a restore is all or nothing — it brings the whole device back, so
+            it cannot undo a single mis-typed set. Fixing one of those is what editing a
+            past set is for.
+          </ThemedText>
+          <ThemedText type="code" style={styles.path}>
+            {String(SQLite.defaultDatabaseDirectory ?? 'unknown')}/{DATABASE_NAME}
+          </ThemedText>
+        </ThemedView>
+
         <ThemedText type="code" style={styles.heading}>
           not built yet
         </ThemedText>
@@ -120,4 +148,5 @@ const styles = StyleSheet.create({
   },
   heading: { textTransform: 'uppercase' },
   card: { gap: Spacing.three, padding: Spacing.four, borderRadius: Spacing.four },
+  path: { opacity: 0.6 },
 });
