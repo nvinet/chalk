@@ -419,11 +419,44 @@ requiring 0; `src/db/seed.ts` has always shipped 1, and no group in it is 0. The
 claim is struck rather than the seed changed — nothing to migrate, and no bug:
 the seed was correct for a reason nobody had written down.
 
+### D24 — A session keeps a family; anything else may be logged but counts for nothing
+Agreed 14 Sep 2026 (issue #62, answering Q31). Tester feedback on #31 was that
+he trained across families and the app made him end a session to do it. True,
+and worth fixing — but the obvious fix was not the one taken.
+
+**A session still has one primary family**, chosen when it starts, exactly as
+before. Its requirements still snapshot from that family (#19), and it still
+succeeds when that family's muscle groups are met (D3, D23). **Any exercise may
+be logged during it, from any family. Those outside the session's family are
+recorded and count for nothing.**
+
+So nothing about completion changes. D2 and D3 survive untouched, and the
+question of "what does a successful session mean when it spans families" never
+has to be answered, because a session does not span families — it permits
+visitors.
+
+**This is what kept N4.** The reading the feedback described — Today, then a
+generic "start session", then a family picker, then a muscle group, then an
+exercise — costs three taps to reach a machine. N4's third clause allows two,
+and #31 exists to defend that budget. Keeping the family means the session
+screen still opens onto that family's groups, so the common path is muscle
+group, exercise, log: two taps, unchanged. Reaching outside is a side door, and
+a rare path is allowed to cost more.
+
+**It is also what keeps the record honest.** An exercise logged for a muscle
+group that the session does not require would otherwise have nowhere to be
+counted and no reason to be stored. Recorded-but-not-counted is the same shape
+D5 already uses for a set that is written down but does not qualify, and D15
+for warm-ups: kept, visible, worth nothing.
+
+The feedback's own phrasing pointed here — "suggest the muscle family, but
+still allow extras". Once scheduling exists (M3), the suggestion is what
+changes; the rule does not.
+
 ## Open — ask, do not guess
 
 | | Question | Blocks |
 |---|---|---|
-| **Q31** | Can a session span families, and what does completion mean then? | Today (#32); session screen (#20); scheduling (#33) |
 | **Q11** | Body weight / measurements — wanted at all? | Deliberately out of v1 |
 
 ---

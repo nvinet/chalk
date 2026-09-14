@@ -79,10 +79,9 @@ Early. The repository currently holds the Expo starter scaffold under `src/`
 plus the planning material in `docs/`. The domain layer, database schema and
 session-logging screens described above are designed but not yet built.
 
-Several decisions are still open and are listed in `docs/decisions.md` — most
-significantly whether a session may span families and what completion then means
-(Q31). These block the corresponding features; they are questions to ask, not to
-guess at.
+One decision is still open and is listed in `docs/decisions.md`: whether body
+weight and measurements are wanted at all (Q11), deliberately out of v1. It is a
+question to ask, not to guess at.
 
 Targets are deliberately out of v1 (D16).
 

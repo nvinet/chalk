@@ -138,8 +138,6 @@ failure on first launch.
 These are unanswered and marked in `docs/decisions.md`. If a task needs one,
 stop and ask rather than inventing an answer:
 
-- **Q31** — whether a session may span families, and what a successful session
-  means if it can.
 - **Q11** — body weight and measurements, deliberately out of v1.
 
 The taxonomy is settled (D18), and so is the plan: the schedule is defined by
@@ -149,4 +147,5 @@ by logging a set, shown inline above the Log button, 90 seconds until an
 exercise proves otherwise. Completion is settled too (D23): one exercise
 completes every muscle group including forearms, while three *working* sets
 complete a weight/reps exercise — timed and distance exercises still count on
-one qualifying entry.
+one qualifying entry. A session keeps one family (D24): anything may be logged
+during it, but exercises outside that family count for nothing.
