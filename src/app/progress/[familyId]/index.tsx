@@ -13,6 +13,7 @@ import {
   useRecentSessions,
 } from '@/db/repository';
 import { indexById, isSetLogged } from '@/domain/completion';
+import { formatKg, volumeByMuscleGroup } from '@/domain/scoring';
 import { counts } from '@/domain/planning';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -38,6 +39,21 @@ export default function ProgressFamilyScreen() {
       exercisesById: indexById(listExercises()),
     };
   }, [familyId]);
+
+  /**
+   * Sets and volume per muscle group (#39).
+   *
+   * Exact, not estimated. Every set names the group it was performed for, so
+   * nothing is attributed by guesswork — which is the payoff for D4, and the
+   * reason this app needs no primary/secondary muscle weighting.
+   *
+   * Counted over the sessions loaded below, abandoned ones excluded. The
+   * screen says how far back that reaches rather than implying "all time".
+   */
+  const totals = useMemo(
+    () => volumeByMuscleGroup(sessions.filter(counts), { exercises: [...data.exercisesById.values()] }),
+    [sessions, data.exercisesById],
+  );
 
   // A group counts as trained on a date only if a set there actually counted —
   // a skipped group, or one with nothing properly recorded, did not happen.
@@ -70,8 +86,14 @@ export default function ProgressFamilyScreen() {
         </View>
 
         <ScrollView contentContainerStyle={styles.scroll}>
+          <ThemedText type="small" themeColor="textSecondary">
+            Sets and volume are exact, not estimated: every set names the muscle group it
+            was performed for. Counted over the last {sessions.length} sessions.
+          </ThemedText>
+
           {data.groups.map((group) => {
             const last = lastTrained.get(group.id);
+            const total = totals.get(group.id);
             return (
               <Pressable
                 key={group.id}
@@ -88,6 +110,12 @@ export default function ProgressFamilyScreen() {
                   <ThemedText type="small" themeColor="textSecondary">
                     {last ? `last trained ${last}` : 'never trained'}
                   </ThemedText>
+                  {total && (
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {total.sets} {total.sets === 1 ? 'set' : 'sets'} ·{' '}
+                      {formatKg(total.volumeKg)} lifted
+                    </ThemedText>
+                  )}
                 </View>
                 <ThemedText type="small" themeColor="textSecondary">
                   ›
