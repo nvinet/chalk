@@ -1,7 +1,6 @@
-import { router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import {
   Sortable,
   SortableItem,
@@ -9,9 +8,10 @@ import {
 } from 'react-native-reanimated-dnd';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CatalogueAddField, CatalogueHeader } from '@/components/catalogue-header';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, MinTouchTarget, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Spacing } from '@/constants/theme';
 import {
   createFamily,
   listFamilies,
@@ -20,7 +20,7 @@ import {
 } from '@/db/repository';
 import type { Family } from '@/domain/types';
 import { useTheme } from '@/hooks/use-theme';
-import { HandleWidth, orderedIds, RowHeight } from './drag';
+import { HandleWidth, orderedIds, RowHeight } from '@/components/catalogue-list';
 
 /**
  * W10 — the families, and the order they appear in (#15, reshaped by #69).
@@ -37,8 +37,6 @@ import { HandleWidth, orderedIds, RowHeight } from './drag';
 type Row = { id: string; family: Family; groups: number };
 
 export default function FamiliesScreen() {
-  const colors = useTheme();
-
   // Read on mount, and again after adding — nothing off this screen changes a
   // family while it is open, and navigating back to it mounts it again.
   const read = () =>
@@ -78,46 +76,23 @@ export default function FamiliesScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            style={styles.headerButton}
-            accessibilityRole="button">
-            <ThemedText type="link">‹ More</ThemedText>
-          </Pressable>
-          <ThemedText type="smallBold">Families</ThemedText>
-          <Pressable
-            onPress={() => {
-              setNewName('');
-              setAdding((open) => !open);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={adding ? 'Cancel adding a family' : 'Add a family'}
-            style={[styles.headerButton, styles.headerAction]}>
-            <SymbolView
-              name={adding ? 'xmark' : 'plus'}
-              tintColor={colors.accent}
-              size={20}
-            />
-          </Pressable>
-        </View>
+        <CatalogueHeader
+          title="Families"
+          adding={adding}
+          addLabel="Add a family"
+          onToggleAdd={() => {
+            setNewName('');
+            setAdding((open) => !open);
+          }}
+        />
 
         {adding && (
-          <View style={styles.addRow}>
-            <TextInput
-              value={newName}
-              onChangeText={setNewName}
-              placeholder="New family"
-              placeholderTextColor={colors.textSecondary}
-              autoFocus
-              onSubmitEditing={add}
-              returnKeyType="done"
-              style={[styles.input, { color: colors.text, borderColor: colors.border }]}
-            />
-            <Pressable onPress={add} accessibilityRole="button" style={styles.addButton}>
-              <ThemedText type="link">Add</ThemedText>
-            </Pressable>
-          </View>
+          <CatalogueAddField
+            value={newName}
+            onChangeText={setNewName}
+            onSubmit={add}
+            placeholder="New family"
+          />
         )}
 
         <ThemedText type="small" themeColor="textSecondary" style={styles.intro}>
@@ -172,30 +147,6 @@ function FamilyRow({ row }: { row: Row }) {
 const styles = StyleSheet.create({
   container: { flex: 1, flexDirection: 'row', justifyContent: 'center' },
   safeArea: { flex: 1, width: '100%', maxWidth: MaxContentWidth },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.three,
-    paddingBottom: Spacing.three,
-  },
-  headerButton: { minHeight: MinTouchTarget, minWidth: 80, justifyContent: 'center' },
-  headerAction: { alignItems: 'flex-end' },
-  addRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.four,
-    paddingBottom: Spacing.three,
-  },
-  addButton: { minHeight: MinTouchTarget, justifyContent: 'center' },
-  input: {
-    flex: 1,
-    minHeight: MinTouchTarget,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.three,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
   intro: { paddingHorizontal: Spacing.four, paddingBottom: Spacing.three },
   list: { backgroundColor: 'transparent' },
   row: {

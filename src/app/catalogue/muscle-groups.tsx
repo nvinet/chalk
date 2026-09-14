@@ -1,7 +1,6 @@
-import { router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import {
   Sortable,
   SortableItem,
@@ -9,6 +8,7 @@ import {
 } from 'react-native-reanimated-dnd';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CatalogueAddField, CatalogueHeader } from '@/components/catalogue-header';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, MinTouchTarget, Spacing } from '@/constants/theme';
@@ -28,7 +28,7 @@ import {
 import type { FamilyMuscleGroupView } from '@/db/repository';
 import type { MuscleGroup } from '@/domain/types';
 import { useTheme } from '@/hooks/use-theme';
-import { HandleWidth, orderedIds, RowHeight } from './drag';
+import { HandleWidth, orderedIds, RowHeight } from '@/components/catalogue-list';
 
 /**
  * The muscle groups, and what each family asks of them (#60, reshaped by #69).
@@ -164,16 +164,24 @@ export default function MuscleGroupsScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            style={styles.headerButton}
-            accessibilityRole="button">
-            <ThemedText type="link">‹ More</ThemedText>
-          </Pressable>
-          <ThemedText type="smallBold">Muscle groups</ThemedText>
-          <View style={styles.headerButton} />
-        </View>
+        <CatalogueHeader
+          title="Muscle groups"
+          adding={adding}
+          addLabel="Add a muscle group"
+          onToggleAdd={() => {
+            setNewName('');
+            setAdding((open) => !open);
+          }}
+        />
+
+        {adding && (
+          <CatalogueAddField
+            value={newName}
+            onChangeText={setNewName}
+            onSubmit={add}
+            placeholder={`New ${family?.name.toLowerCase() ?? ''} group`}
+          />
+        )}
 
         {/* One family at a time, so there is exactly one list on the screen
             and nothing scrolling around it. */}
@@ -214,39 +222,6 @@ export default function MuscleGroupsScreen() {
           style={styles.list}
         />
 
-        <View style={styles.footer}>
-          {adding ? (
-            <View style={styles.addRow}>
-              <TextInput
-                value={newName}
-                onChangeText={setNewName}
-                placeholder={`New ${family?.name.toLowerCase() ?? ''} group`}
-                placeholderTextColor={colors.textSecondary}
-                autoFocus
-                onSubmitEditing={add}
-                style={[styles.input, { color: colors.text, borderColor: colors.border }]}
-              />
-              <Pressable onPress={add} accessibilityRole="button" style={styles.iconButton}>
-                <ThemedText type="link">Add</ThemedText>
-              </Pressable>
-              <Pressable
-                onPress={() => setAdding(false)}
-                accessibilityRole="button"
-                style={styles.iconButton}>
-                <ThemedText type="small" themeColor="textSecondary">
-                  Cancel
-                </ThemedText>
-              </Pressable>
-            </View>
-          ) : (
-            <Pressable
-              onPress={() => setAdding(true)}
-              accessibilityRole="button"
-              style={styles.addButton}>
-              <ThemedText type="link">+ Add a group</ThemedText>
-            </Pressable>
-          )}
-        </View>
       </SafeAreaView>
     </ThemedView>
   );
@@ -333,14 +308,6 @@ function GroupRow({
 const styles = StyleSheet.create({
   container: { flex: 1, flexDirection: 'row', justifyContent: 'center' },
   safeArea: { flex: 1, width: '100%', maxWidth: MaxContentWidth },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.three,
-    paddingBottom: Spacing.three,
-  },
-  headerButton: { minHeight: MinTouchTarget, minWidth: 80, justifyContent: 'center' },
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -357,7 +324,6 @@ const styles = StyleSheet.create({
   },
   list: { backgroundColor: 'transparent' },
   intro: { paddingHorizontal: Spacing.four, paddingBottom: Spacing.three },
-  footer: { paddingHorizontal: Spacing.four, paddingVertical: Spacing.three },
   row: {
     height: RowHeight,
     flexDirection: 'row',
@@ -382,14 +348,5 @@ const styles = StyleSheet.create({
     minWidth: 40,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  addRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  addButton: { minHeight: MinTouchTarget, justifyContent: 'center' },
-  input: {
-    flex: 1,
-    minHeight: MinTouchTarget,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.three,
-    borderWidth: StyleSheet.hairlineWidth,
   },
 });
