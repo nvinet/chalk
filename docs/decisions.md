@@ -566,6 +566,32 @@ from another family, which is a real thing to want mid-session and is supported.
 This is about an exercise that does not exist yet, which is a gap in the
 catalogue rather than a change of plan.
 
+### D29 — The iPad is not a target
+Agreed 14 Sep 2026 (issue #46, closed; answering Q14). Q14 asked whether the
+iPad is used at the gym or only at home, because W13's worth depended entirely
+on the answer. The answer is neither: Chalk is not used on an iPad at all.
+
+So **#46 is closed and there is no iPad layout**. The plan listed "iPhone and
+iPad, portrait only" in its scope, and that half of the sentence is now wrong —
+this entry supersedes it, as D18 superseded the spreadsheet as the source of
+the taxonomy.
+
+**The app still runs on an iPad**, scaled, because `ios.supportsTablet` is
+`true` and nothing here changes that today. It is worth setting to `false` the
+next time a build happens for another reason: it currently promises a designed
+tablet experience that does not exist. It is deliberately **not** worth a build
+of its own — that flag is native configuration, so flipping it moves the
+fingerprint and strands the build his son is on for over-the-air updates, which
+is a real cost to fix a cosmetic overstatement nobody is looking at.
+
+**What does not change:** portrait only, everywhere. That was never about the
+iPad — it is about a phone held in one hand in a noisy room, and it stands on
+its own.
+
+Q14 had never reached the Open table. It existed only in `bootstrap-issues.sh`
+and in #46's body — the same way Q19 did before D26 — so a later session would
+have found "check Q14 first" with no way to check it.
+
 ## Open — ask, do not guess
 
 | | Question | Blocks |
@@ -584,6 +610,6 @@ catalogue rather than a change of plan.
 - **A fixed muscle-group list shipped by us** — a user complaint about RP
   ("lats and mid back count as the same") is the argument for him defining his
   own. Muscle groups are a managed, editable list.
-- **Landscape and iPad-only layouts** — portrait everywhere, iPad is a wider
-  view of the same data.
+- **Landscape and iPad-only layouts** — portrait everywhere. The iPad is not a
+  target at all (D29); this line survives for the landscape half of it.
 - **Anything requiring a server, account or subscription.**

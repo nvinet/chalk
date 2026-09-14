@@ -157,8 +157,8 @@ than delete.
 ## Conventions
 
 - TypeScript `strict`, with `noUncheckedIndexedAccess`.
-- Portrait only, everywhere, including iPad — iPad is a wider view of the same
-  data, not a different layout.
+- Portrait only, everywhere. The iPad is not a target at all (D29) — the app
+  runs there scaled, but nothing is designed for it.
 - Touch targets ≥ 44pt, primary actions in the lower third and reachable with
   one thumb.
 - Never block logging. Warn on an implausible value; never reject it.

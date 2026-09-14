@@ -116,7 +116,7 @@ failure on first launch.
 ## Conventions
 
 - TypeScript `strict` with `noUncheckedIndexedAccess`.
-- Portrait only. No landscape layouts anywhere, including iPad.
+- Portrait only. No landscape layouts anywhere. The iPad is not a target (D29).
 - Touch targets ≥ 44pt; primary actions in the lower third, one-thumb reachable.
 - Never block logging. Warn on an implausible value; never reject it.
 - No accounts, no analytics, no ads, no network calls.
