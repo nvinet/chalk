@@ -55,7 +55,7 @@
     "build:ios": "eas build --platform ios --profile production",
     "submit:ios": "eas submit --platform ios --profile production --latest",
     "release:ios": "eas build --platform ios --profile production --auto-submit",
-    "update:ios": "eas update --branch production --platform ios",
+    "update:ios": "eas update --branch production --platform ios --environment production",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
