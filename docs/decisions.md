@@ -531,6 +531,41 @@ from the moment real data goes in — is the whole of it rather than one of two.
 Revisit if a backup he controls is ever wanted for its own sake, or if
 restoring a single session becomes a real need rather than a hypothetical one.
 
+### D28 — A missing exercise is added to the catalogue, not improvised into a session
+Agreed 14 Sep 2026 (issue #25, rejected). #25 proposed letting him log against
+any exercise mid-session and offering to make the mapping permanent afterwards,
+so that a missing mapping could never block him.
+
+**The premise was wrong about what actually happens.** The only real case is an
+exercise missing from the catalogue entirely — and the honest answer to that is
+to add it, with the mapping it should have had, and carry on. An improvised
+path would create a second way for an exercise to exist, one that skips the
+editor where tracking type, increment, rest and muscle groups are decided, and
+leaves a half-specified row to be tidied up later. That is how catalogues rot.
+
+**The sanctioned path already works**, which is what makes rejecting this safe
+rather than merely tidy:
+
+| Step | Mechanism |
+|---|---|
+| Leave the session | `✕` on the session header |
+| Add the exercise | More → Catalogue → Exercises |
+| Map it to its groups | the exercise editor's "used for" (#16) |
+| Resume | Today's resume card |
+
+Nothing is lost by leaving: every set is already on disk as it was entered (N7,
+#23), at most one session is in progress (D21), and the session screen re-reads
+its catalogue when it comes back — so the new exercise is simply there.
+
+**It costs more taps than #25 would have**, and that is the trade being made.
+Adding an exercise is rare, it happens once per exercise ever, and the cost buys
+a catalogue where every row was created the same way.
+
+Note this is *not* the same question as D24. D24 is about training something
+from another family, which is a real thing to want mid-session and is supported.
+This is about an exercise that does not exist yet, which is a gap in the
+catalogue rather than a change of plan.
+
 ## Open — ask, do not guess
 
 | | Question | Blocks |
@@ -541,6 +576,8 @@ restoring a single session becomes a real need rather than a hypothetical one.
 
 ## Rejected, with reasons
 
+- **Logging against an unmapped exercise mid-session** — D28. The case is a
+  missing exercise, and the answer is to add it properly and resume.
 - **Primary/secondary muscle weighting** — unnecessary once the set names its
   group (D4). Reintroducing it would make exact numbers approximate.
 - **Importing the spreadsheet** — D7.
