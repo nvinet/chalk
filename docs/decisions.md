@@ -453,6 +453,28 @@ The feedback's own phrasing pointed here — "suggest the muscle family, but
 still allow extras". Once scheduling exists (M3), the suggestion is what
 changes; the rule does not.
 
+### D25 — The screens are wireframes on purpose, and the UI packages stay
+Agreed 14 Sep 2026, during #71. What ships today is the behaviour, drawn plainly:
+themed text, hairline borders, a list where a list is needed. It is not a first
+attempt at a finished interface — it is deliberately unstyled until the
+behaviour is settled, and M6 is where it stops being.
+
+**So four dependencies with no references in `src/` are kept rather than
+removed:** `expo-glass-effect`, `@expo/ui`, `expo-device` and `expo-font`. An
+audit will keep flagging them as unused, and they keep being unused, and that
+is correct — they are what the polish pass will be built from.
+
+Removing them would be right if the app were finished and they had never been
+reached for. It is not, and they will be. Leaving them costs build size and a
+little fingerprint surface; taking them out costs reinstating them later and
+losing the reason they were chosen.
+
+**What this means for reading the code:** a screen that looks sparse is not
+unfinished work, it is work whose finish has not happened yet. Do not treat the
+current styling as a design to be consistent with. Do treat the *behaviour* as
+settled — the rules, the counting, the navigation — because that is what every
+decision above is about.
+
 ## Open — ask, do not guess
 
 | | Question | Blocks |

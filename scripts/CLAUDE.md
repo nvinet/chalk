@@ -149,3 +149,8 @@ completes every muscle group including forearms, while three *working* sets
 complete a weight/reps exercise — timed and distance exercises still count on
 one qualifying entry. A session keeps one family (D24): anything may be logged
 during it, but exercises outside that family count for nothing.
+
+The screens are wireframes on purpose (D25). Styling is M6's job, so a sparse
+screen is not unfinished work — and `expo-glass-effect`, `@expo/ui`,
+`expo-device` and `expo-font` are unused on purpose, kept for that pass. Do not
+remove them, and do not treat the current styling as a design to match.
