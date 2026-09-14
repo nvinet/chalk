@@ -336,25 +336,93 @@ export function formatKg(kg: number): string {
   return `${trimDecimal(kg)} kg`;
 }
 
-/** Chart series for one pairing: heaviest set per session, oldest first. */
-export function topSetSeries(
+/** What a chart can be drawn of, for one pairing (#38). */
+export type SeriesMetric = "topSet" | "estimatedOneRepMax" | "volume";
+
+export interface SeriesPoint {
+  date: string;
+  /** Heaviest set that session. */
+  topSetKg: number;
+  /** Best estimated 1RM that session, or null when no set qualified. */
+  estimatedOneRepMaxKg: number | null;
+  /** Everything lifted for this pairing that session. */
+  volumeKg: number;
+}
+
+/**
+ * One pass over the history, producing every series a chart might draw (#38).
+ *
+ * Three metrics from one walk rather than three walks, because they are read
+ * together by a screen that toggles between them — and because they must agree
+ * about which sets counted. Everything goes through `isSetLogged`, so a
+ * warm-up is absent from all three (D15) rather than from whichever one
+ * remembered to exclude it.
+ *
+ * Oldest first: a chart reads left to right.
+ */
+export function pairingSeries(
   sessions: Session[],
   pairing: Pairing,
   exercise: Exercise,
-): Array<{ date: string; weightKg: number }> {
+): SeriesPoint[] {
   // A non-weight exercise has no top set; charting one would draw a flat line
   // of zeroes (D12).
   if (!isWeightBased(exercise.tracking)) return [];
 
   return sessions
     .map((session) => {
-      const weights = session.sets
-        .filter((set) => matches(set, pairing) && isSetLogged(set, exercise.tracking))
-        .map((set) => set.weightKg ?? 0);
-      return weights.length
-        ? { date: session.date, weightKg: Math.max(...weights) }
-        : null;
+      const sets = session.sets.filter(
+        (set) => matches(set, pairing) && isSetLogged(set, exercise.tracking),
+      );
+      if (sets.length === 0) return null;
+
+      let topSetKg = 0;
+      let bestE1rm: number | null = null;
+      let volumeKg = 0;
+
+      for (const set of sets) {
+        const weight = set.weightKg ?? 0;
+        topSetKg = Math.max(topSetKg, weight);
+        volumeKg += setVolumeKg(set, exercise);
+
+        const e1rm = estimatedOneRepMaxKg(set.reps ?? 0, weight);
+        if (e1rm !== null) bestE1rm = bestE1rm === null ? e1rm : Math.max(bestE1rm, e1rm);
+      }
+
+      return { date: session.date, topSetKg, estimatedOneRepMaxKg: bestE1rm, volumeKg };
     })
-    .filter((p): p is { date: string; weightKg: number } => p !== null)
+    .filter((point): point is SeriesPoint => point !== null)
     .sort((a, b) => (a.date < b.date ? -1 : 1));
+}
+
+/** Reads one metric off the series, as a chart wants it: dates and numbers. */
+export function seriesValues(
+  points: SeriesPoint[],
+  metric: SeriesMetric,
+): { date: string; value: number }[] {
+  return points
+    .map((point) => {
+      const value =
+        metric === "topSet"
+          ? point.topSetKg
+          : metric === "volume"
+            ? point.volumeKg
+            : point.estimatedOneRepMaxKg;
+      // An estimate is genuinely absent for a set above twelve reps, so that
+      // session is left out rather than drawn as a zero.
+      return value === null ? null : { date: point.date, value };
+    })
+    .filter((p): p is { date: string; value: number } => p !== null);
+}
+
+/** Chart series for one pairing: heaviest set per session, oldest first. */
+export function topSetSeries(
+  sessions: Session[],
+  pairing: Pairing,
+  exercise: Exercise,
+): { date: string; weightKg: number }[] {
+  return pairingSeries(sessions, pairing, exercise).map((point) => ({
+    date: point.date,
+    weightKg: point.topSetKg,
+  }));
 }

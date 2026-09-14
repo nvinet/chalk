@@ -97,6 +97,7 @@ export default function RootLayout() {
             {/* Progress, reached from its tab. */}
             <Stack.Screen name="progress/[familyId]/index" />
             <Stack.Screen name="progress/[familyId]/[groupId]/index" />
+            <Stack.Screen name="progress/[familyId]/[groupId]/[exerciseId]" />
             <Stack.Screen name="catalogue/muscle-groups" />
             <Stack.Screen name="catalogue/families" />
             <Stack.Screen name="catalogue/exercises" />

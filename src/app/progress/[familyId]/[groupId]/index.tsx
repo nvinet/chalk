@@ -33,7 +33,7 @@ import { useTheme } from '@/hooks/use-theme';
  * best per pairing, not a cache.
  */
 export default function ProgressGroupScreen() {
-  const { groupId } = useLocalSearchParams<{ groupId: string }>();
+  const { familyId, groupId } = useLocalSearchParams<{ familyId: string; groupId: string }>();
   const colors = useTheme();
 
   const data = useMemo(() => {
@@ -70,10 +70,22 @@ export default function ProgressGroupScreen() {
 
         <ScrollView contentContainerStyle={styles.scroll}>
           {data.rows.map(({ exercise, last, best }) => (
-            <View
+            <Pressable
               key={exercise.id}
+              onPress={() =>
+                router.push({
+                  pathname: '/progress/[familyId]/[groupId]/[exerciseId]',
+                  params: { familyId, groupId, exerciseId: exercise.id },
+                })
+              }
+              accessibilityRole="button"
               style={[styles.row, { borderColor: colors.border }]}>
-              <ThemedText type="smallBold">{exercise.name}</ThemedText>
+              <View style={styles.rowHead}>
+                <ThemedText type="smallBold">{exercise.name}</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  ›
+                </ThemedText>
+              </View>
               <ThemedText type="small" themeColor="textSecondary">
                 {last ? `last · ${last.measure} · ${last.date}` : 'last · not used for this group yet'}
               </ThemedText>
@@ -84,7 +96,7 @@ export default function ProgressGroupScreen() {
                   }`}
                 </ThemedText>
               )}
-            </View>
+            </Pressable>
           ))}
 
           {data.rows.length === 0 && (
@@ -110,6 +122,7 @@ const styles = StyleSheet.create({
   },
   headerButton: { minHeight: MinTouchTarget, minWidth: 90, justifyContent: 'center' },
   scroll: { paddingHorizontal: Spacing.four, paddingBottom: Spacing.five, gap: Spacing.two },
+  rowHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   row: {
     gap: Spacing.half,
     paddingVertical: Spacing.three,

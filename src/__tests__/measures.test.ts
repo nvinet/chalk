@@ -18,6 +18,8 @@ import {
   bestsForPairing,
   formatWeightReps,
   lastTimeForPairing,
+  pairingSeries,
+  seriesValues,
   setsByPairing,
   personalBestsInSession,
   setVolumeKg,
@@ -355,4 +357,90 @@ test("warm-ups are kept — they happened, even counting for nothing", () => {
     set({ id: "x", exerciseId: "bench", muscleGroupId: "chest", setNumber: 2, reps: 8, weightKg: 80 }),
   ]);
   assert.deepEqual(setsByPairing(s)[0]?.sets.map((x) => x.id), ["w", "x"]);
+});
+
+// ----------------------------------------------------- the chart series (#38)
+
+test("a series holds all three metrics from one pass, oldest first", () => {
+  const points = pairingSeries(
+    [
+      session([set({ id: "b", reps: 5, weightKg: 100 })], { id: "s2", date: "2026-09-08" }),
+      session([set({ id: "a", reps: 10, weightKg: 60 })], { id: "s1", date: "2026-09-01" }),
+    ],
+    pairing,
+    lift,
+  );
+
+  assert.deepEqual(points.map((p) => p.date), ["2026-09-01", "2026-09-08"]);
+  assert.equal(points[0]?.topSetKg, 60);
+  assert.equal(points[1]?.topSetKg, 100);
+  // Volume is reps × weight for the sets that counted.
+  assert.equal(points[0]?.volumeKg, 600);
+  assert.equal(points[1]?.volumeKg, 500);
+});
+
+test("a warm-up is absent from every metric, not just one", () => {
+  const points = pairingSeries(
+    [
+      session(
+        [
+          set({ id: "w", reps: 10, weightKg: 200, warmup: true }),
+          set({ id: "x", setNumber: 2, reps: 8, weightKg: 80 }),
+        ],
+        { id: "s1", date: "2026-09-01" },
+      ),
+    ],
+    pairing,
+    lift,
+  );
+
+  // 200 kg would have been the top set, and 2000 kg of volume, had the warm-up
+  // counted anywhere (D15).
+  assert.equal(points[0]?.topSetKg, 80);
+  assert.equal(points[0]?.volumeKg, 640);
+});
+
+test("a session with no qualifying set is not a point on the chart", () => {
+  const points = pairingSeries(
+    [
+      session([set({ id: "a", reps: null, weightKg: 60 })], { id: "s1", date: "2026-09-01" }),
+      session([set({ id: "b", reps: 8, weightKg: 60 })], { id: "s2", date: "2026-09-08" }),
+    ],
+    pairing,
+    lift,
+  );
+  assert.equal(points.length, 1);
+  assert.equal(points[0]?.date, "2026-09-08");
+});
+
+test("an estimate above twelve reps is absent rather than drawn as zero", () => {
+  const points = pairingSeries(
+    [
+      // 20 reps: `estimatedOneRepMaxKg` refuses to estimate that far out.
+      session([set({ id: "a", reps: 20, weightKg: 40 })], { id: "s1", date: "2026-09-01" }),
+      session([set({ id: "b", reps: 5, weightKg: 100 })], { id: "s2", date: "2026-09-08" }),
+    ],
+    pairing,
+    lift,
+  );
+
+  assert.equal(points[0]?.estimatedOneRepMaxKg, null);
+  assert.equal(points.length, 2);
+
+  // The chart drops that session instead of plotting a zero.
+  const drawn = seriesValues(points, "estimatedOneRepMax");
+  assert.equal(drawn.length, 1);
+  assert.equal(drawn[0]?.date, "2026-09-08");
+
+  // Top set keeps both, because both sessions had one.
+  assert.equal(seriesValues(points, "topSet").length, 2);
+});
+
+test("a timed exercise has no series to chart", () => {
+  const points = pairingSeries(
+    [session([set({ id: "r", exerciseId: "rower", durationSeconds: 900 })])],
+    { exerciseId: "rower", muscleGroupId: "chest" },
+    rower,
+  );
+  assert.deepEqual(points, []);
 });
