@@ -12,7 +12,9 @@ import {
   abandonSession,
   finishSession,
   listExercises,
+  listFamilies,
   listMuscleGroups,
+  muscleGroupsForFamily,
   skipMuscleGroup,
   unskipMuscleGroup,
   useSession,
@@ -21,6 +23,7 @@ import {
   evaluateSession,
   indexById,
   outstandingGroups,
+  setsLoggedForGroup,
   type MuscleGroupOutcome,
 } from '@/domain/completion';
 import { isFinished, remainingSeconds, restProgress } from '@/domain/rest';
@@ -47,6 +50,9 @@ export default function SessionScreen() {
   // conditional on having found a session.
   const rest = useCurrentRest();
 
+  // The side door is shut by default (D24).
+  const [picking, setPicking] = useState(false);
+
   // The catalogue does not change during a session, so it is read once.
   const catalogue = useMemo(() => {
     const exercises = listExercises();
@@ -54,6 +60,14 @@ export default function SessionScreen() {
       exercises,
       exercisesById: indexById(exercises),
       groupNames: new Map(listMuscleGroups().map((g) => [g.id, g.name])),
+      // Every family's groups, for the side door. Read once with the rest of
+      // the catalogue: it does not change during a session either.
+      groupsByFamily: listFamilies().map((family) => ({
+        family,
+        groups: muscleGroupsForFamily(family.id)
+          .map((r) => r.group)
+          .filter((g) => !g.implicit && !g.archived),
+      })),
     };
   }, []);
 
@@ -141,6 +155,32 @@ export default function SessionScreen() {
   const optional = outcome.groups.filter((g) => g.optional);
   const next = outstandingGroups(outcome).find((g) => !g.optional);
 
+  // Anything trained that this session does not require (D24). Real work, kept
+  // and shown — but listed apart, because `evaluateSession` scores the
+  // requirements snapshot and these are not in it.
+  const requiredIds = new Set(session.requirements.map((r) => r.muscleGroupId));
+  const visitors = [...new Set(session.sets.map((set) => set.muscleGroupId))]
+    .filter((groupId) => !requiredIds.has(groupId))
+    .map((groupId) => ({
+      groupId,
+      name: groupNames.get(groupId) ?? groupId,
+      sets: [...setsLoggedForGroup(session, groupId, exercisesById).values()].reduce(
+        (total, n) => total + n,
+        0,
+      ),
+    }))
+    .filter((visitor) => visitor.sets > 0);
+
+  // Groups he could train that are not this session's. The side door stays
+  // shut until asked for: the session's own groups are the path N4 protects,
+  // and this must not become a step on it.
+  const elsewhere = catalogue.groupsByFamily
+    .map(({ family, groups }) => ({
+      family,
+      groups: groups.filter((g) => !requiredIds.has(g.id)),
+    }))
+    .filter(({ groups }) => groups.length > 0);
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
@@ -226,6 +266,62 @@ export default function SessionScreen() {
               ))}
             </>
           )}
+
+          {visitors.length > 0 && (
+            <>
+              <ThemedText type="code" style={styles.optionalHeading}>
+                logged, not counted
+              </ThemedText>
+              {visitors.map((visitor) => (
+                <Pressable
+                  key={visitor.groupId}
+                  onPress={() => openGroup(session.id, visitor.groupId)}
+                  accessibilityRole="button"
+                  style={[styles.visitorRow, { borderColor: colors.border }]}>
+                  <ThemedText style={styles.visitorName}>{visitor.name}</ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {visitor.sets} {visitor.sets === 1 ? 'set' : 'sets'}
+                  </ThemedText>
+                </Pressable>
+              ))}
+            </>
+          )}
+
+          {/* The side door (D24). A session keeps its family, so this is not a
+              step on the path to a machine — that stays two taps — but nothing
+              should require ending a session to train something else. */}
+          <Pressable
+            onPress={() => setPicking((open) => !open)}
+            accessibilityRole="button"
+            style={styles.elsewhereToggle}>
+            <ThemedText type="link">
+              {picking ? 'Never mind' : 'Train something else'}
+            </ThemedText>
+          </Pressable>
+
+          {picking &&
+            elsewhere.map(({ family, groups }) => (
+              <View key={family.id} style={styles.elsewhereFamily}>
+                <ThemedText type="code" style={styles.optionalHeading}>
+                  {family.name.toLowerCase()}
+                </ThemedText>
+                {groups.map((group) => (
+                  <Pressable
+                    key={group.id}
+                    onPress={() => {
+                      setPicking(false);
+                      openGroup(session.id, group.id);
+                    }}
+                    accessibilityRole="button"
+                    style={[styles.visitorRow, { borderColor: colors.border }]}>
+                    <ThemedText style={styles.visitorName}>{group.name}</ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      ›
+                    </ThemedText>
+                  </Pressable>
+                ))}
+              </View>
+            ))}
 
           {/* The end of the list is where the session ends. Finishing is a
               button because it is the ordinary way out; abandoning stays a
@@ -424,6 +520,16 @@ const styles = StyleSheet.create({
   },
   groupHead: { gap: Spacing.half },
   exerciseRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  visitorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: MinTouchTarget,
+    paddingVertical: Spacing.two,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  visitorName: { flex: 1 },
+  elsewhereToggle: { minHeight: MinTouchTarget, justifyContent: 'center' },
+  elsewhereFamily: { gap: Spacing.one },
   optionalHeading: { textTransform: 'uppercase', marginTop: Spacing.three },
   cta: {
     margin: Spacing.four,

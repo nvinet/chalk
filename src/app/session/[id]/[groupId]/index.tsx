@@ -84,33 +84,11 @@ export default function MuscleGroupScreen() {
       .map((s) => [s.exerciseId, s]) ?? [],
   );
 
-  // Reachable only by a stale link or a hand-typed URL: W2 lists this
-  // session's own groups. Saying so beats a screen with a blank subtitle and
-  // a back button naming the wrong family.
-  if (!group) {
-    return (
-      <ThemedView style={styles.container}>
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.header}>
-            <Pressable
-              onPress={() => router.back()}
-              style={styles.headerButton}
-              accessibilityRole="button">
-              <ThemedText type="link">‹ {familyLabel(session.familyId)}</ThemedText>
-            </Pressable>
-            <View style={styles.headerTitle}>
-              <ThemedText type="smallBold">{data.name}</ThemedText>
-            </View>
-            <View style={styles.headerButton} />
-          </View>
-          <ThemedText type="small" themeColor="textSecondary" style={styles.notInSession}>
-            {data.name} is not part of this {familyLabel(session.familyId).toLowerCase()}{' '}
-            session, so nothing logged here would count towards it.
-          </ThemedText>
-        </SafeAreaView>
-      </ThemedView>
-    );
-  }
+  // A group this session does not require is trainable, not forbidden (D24).
+  // The sets are real and are kept; they simply have no requirement to satisfy,
+  // which `evaluateSession` enforces by walking the requirements snapshot
+  // rather than the sets. This screen only has to say so.
+  const visiting = group === undefined;
 
   return (
     <ThemedView style={styles.container}>
@@ -125,15 +103,28 @@ export default function MuscleGroupScreen() {
           <View style={styles.headerTitle}>
             <ThemedText type="smallBold">{data.name}</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              {group.optional
-                ? 'optional — never blocks the session'
-                : `${group.loggedCount} of ${group.required} exercises logged`}
+              {visiting
+                ? `not part of this ${familyLabel(session.familyId).toLowerCase()} session`
+                : group.optional
+                  ? 'optional — never blocks the session'
+                  : `${group.loggedCount} of ${group.required} exercises logged`}
             </ThemedText>
           </View>
           <View style={styles.headerButton} />
         </View>
 
         <ScrollView contentContainerStyle={styles.scroll}>
+          {visiting && (
+            <ThemedView type="backgroundElement" style={styles.visiting}>
+              <ThemedText type="code">counts for nothing</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {data.name} is not one of this session&apos;s muscle groups. Sets logged
+                here are kept and appear in the history, but they do not move this
+                session towards {familyLabel(session.familyId).toLowerCase()}.
+              </ThemedText>
+            </ThemedView>
+          )}
+
           {/* Reachable here too: this is the screen he lands on when he leaves
               an exercise, which is exactly when a rest he is done with should
               be stoppable (#63). */}
@@ -307,7 +298,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   why: { gap: Spacing.two, padding: Spacing.three, borderRadius: Spacing.three },
-  notInSession: { paddingHorizontal: Spacing.four },
+  visiting: { gap: Spacing.two, padding: Spacing.three, borderRadius: Spacing.three },
   back: {
     minHeight: MinTouchTarget,
     alignItems: 'center',

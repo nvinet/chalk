@@ -139,35 +139,11 @@ export default function LogExerciseScreen() {
   const setsNeededHere = setsRequiredFor(exercise);
   const setsLeftHere = Math.max(0, setsNeededHere - setsHere);
 
-  // Reachable only by a hand-typed URL — W3 lists this session's own groups.
-  // Worth refusing rather than rendering: a set logged against a group the
-  // session does not have is written, counts for nothing, and never explains
-  // itself.
-  if (!group) {
-    return (
-      <ThemedView style={styles.container}>
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.header}>
-            <Pressable
-              onPress={() => router.back()}
-              style={styles.headerButton}
-              accessibilityRole="button">
-              <ThemedText type="link">‹ back</ThemedText>
-            </Pressable>
-            <View style={styles.headerTitle}>
-              <ThemedText type="smallBold">{exercise.name}</ThemedText>
-            </View>
-            <View style={styles.headerButton} />
-          </View>
-          <ThemedText type="small" themeColor="textSecondary" style={styles.notInSession}>
-            {context.groupName} is not part of this{' '}
-            {familyLabel(session.familyId).toLowerCase()} session, so anything logged here
-            would count for nothing.
-          </ThemedText>
-        </SafeAreaView>
-      </ThemedView>
-    );
-  }
+  // A group this session does not require is trainable, not forbidden (D24).
+  // The set is written, kept, and shown in the history; it simply satisfies no
+  // requirement, which `evaluateSession` guarantees by scoring the requirements
+  // snapshot rather than the sets.
+  const visiting = group === undefined;
 
   const commit = () => {
     logSet(session.id, exerciseId, groupId, toSetInput(exercise.tracking, values));
@@ -316,11 +292,13 @@ export default function LogExerciseScreen() {
 
         <View style={[styles.footer, { borderColor: colors.border }]}>
           <ThemedText type="small" themeColor="textSecondary">
-            {group.optional
-              ? `${context.groupName} is optional — this never blocks the session`
-              : setsLeftHere > 0
-                ? `${setsLeftHere} more ${setsLeftHere === 1 ? 'set' : 'sets'} and ${exercise.name} counts for ${context.groupName}`
-                : `${context.groupName} needs ${group.required} — ${group.loggedCount} logged`}
+            {visiting
+              ? `${context.groupName} is not part of this ${familyLabel(session.familyId).toLowerCase()} session — logged and kept, but it counts for nothing`
+              : group.optional
+                ? `${context.groupName} is optional — this never blocks the session`
+                : setsLeftHere > 0
+                  ? `${setsLeftHere} more ${setsLeftHere === 1 ? 'set' : 'sets'} and ${exercise.name} counts for ${context.groupName}`
+                  : `${context.groupName} needs ${group.required} — ${group.loggedCount} logged`}
           </ThemedText>
           <Pressable
             onPress={() => router.dismissTo({ pathname: '/session/[id]', params: { id: session.id } })}
@@ -467,5 +445,4 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   footerButton: { minHeight: MinTouchTarget, justifyContent: 'center' },
-  notInSession: { paddingHorizontal: Spacing.four },
 });

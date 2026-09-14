@@ -320,6 +320,71 @@ test("unknown exercises are ignored rather than crashing", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Work from outside the session's family (D24)
+// ---------------------------------------------------------------------------
+
+test("a set for a group the session does not require changes nothing", () => {
+  const withoutVisitor = session(
+    completed({ exerciseId: "pec-fly", muscleGroupId: "chest", weightKg: 40 }),
+    [{ muscleGroupId: "chest", requiredExerciseCount: 1 }],
+  );
+
+  const withVisitor = session(
+    [
+      ...completed({ exerciseId: "pec-fly", muscleGroupId: "chest", weightKg: 40 }),
+      // Biceps is not in the requirements: this is a pull exercise logged
+      // during a push session.
+      ...completed({ exerciseId: "hammer-curl", muscleGroupId: "biceps", weightKg: 20 }),
+    ],
+    [{ muscleGroupId: "chest", requiredExerciseCount: 1 }],
+  );
+
+  const before = evaluateSession(withoutVisitor, { exercises });
+  const after = evaluateSession(withVisitor, { exercises });
+
+  // The visitor cannot help...
+  assert.equal(before.successful, true);
+  assert.equal(after.successful, true);
+  assert.equal(after.requiredGroupsMet, before.requiredGroupsMet);
+  assert.equal(after.requiredGroupsTotal, before.requiredGroupsTotal);
+  // ...and it earns no group of its own, because scoring walks the
+  // requirements snapshot rather than the sets.
+  assert.equal(after.groups.length, 1);
+  assert.equal(after.groups[0]?.muscleGroupId, "chest");
+});
+
+test("a visitor cannot rescue a session that has not met its own family", () => {
+  const s = session(
+    [
+      // Nothing for chest at all.
+      ...completed({ exerciseId: "hammer-curl", muscleGroupId: "biceps", weightKg: 20 }),
+    ],
+    [{ muscleGroupId: "chest", requiredExerciseCount: 1 }],
+  );
+
+  const outcome = evaluateSession(s, { exercises });
+  assert.equal(outcome.successful, false);
+  assert.equal(outcome.requiredGroupsMet, 0);
+  // But it is still attendance: he did train.
+  assert.equal(outcome.attended, true);
+});
+
+test("outstanding groups ignore the visitor entirely", () => {
+  const s = session(
+    completed({ exerciseId: "hammer-curl", muscleGroupId: "biceps", weightKg: 20 }),
+    [
+      { muscleGroupId: "chest", requiredExerciseCount: 1 },
+      { muscleGroupId: "biceps", requiredExerciseCount: 0 },
+    ],
+  );
+  // Biceps is optional *in this session*, so it is not outstanding; chest is.
+  assert.deepEqual(
+    outstandingGroups(evaluateSession(s, { exercises })).map((g) => g.muscleGroupId),
+    ["chest"],
+  );
+});
+
+// ---------------------------------------------------------------------------
 // Catalogue queries
 // ---------------------------------------------------------------------------
 

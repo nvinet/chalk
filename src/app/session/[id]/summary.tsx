@@ -84,6 +84,10 @@ export default function SummaryScreen() {
   }
 
   const { session, outcome, groupNames, exercisesById } = data;
+
+  // What this session actually asked of him. Anything logged outside it is
+  // real work that counts for nothing (D24), and the set list says so.
+  const requiredIds = new Set(session.requirements.map((r) => r.muscleGroupId));
   const met = outcome.requiredGroupsMet;
   const total = outcome.requiredGroupsTotal;
 
@@ -202,9 +206,14 @@ export default function SummaryScreen() {
                       </ThemedText>
                       {/* The group it was credited to, not just the exercise:
                           the same exercise can appear twice for two groups and
-                          neither use counts for the other (D4). */}
+                          neither use counts for the other (D4).
+
+                          A group this session did not require is marked, so the
+                          sets below are not read as evidence for a verdict they
+                          took no part in (D24). */}
                       <ThemedText type="small" themeColor="textSecondary">
                         {groupNames.get(entry.muscleGroupId) ?? entry.muscleGroupId}
+                        {requiredIds.has(entry.muscleGroupId) ? '' : ' · not counted'}
                       </ThemedText>
                     </View>
 
