@@ -4,6 +4,7 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StyleSheet, useColorScheme, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { StatusBar } from 'expo-status-bar';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { KeepAwakeWhileTraining } from '@/components/keep-awake-while-training';
@@ -85,6 +86,9 @@ export default function RootLayout() {
     // dragging to reorder the catalogue (#69) needs it either way.
     <GestureHandlerRootView style={styles.fill}>
       <ThemeProvider value={theme}>
+        {/* Follows the scheme, so the clock and battery are legible against
+            whichever background is underneath them (#47). */}
+        <StatusBar style="auto" />
         <AnimatedSplashOverlay />
         {/* The session keeps the screen awake, not any particular screen. */}
         <KeepAwakeWhileTraining />

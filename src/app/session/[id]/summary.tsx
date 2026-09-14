@@ -293,7 +293,7 @@ export default function SummaryScreen() {
           accessibilityRole="button"
           style={styles.doneWrap}>
           <ThemedView style={[styles.done, { backgroundColor: colors.accent }]}>
-            <ThemedText type="smallBold" style={styles.doneLabel}>
+            <ThemedText type="smallBold" themeColor="onFilled">
               Done
             </ThemedText>
           </ThemedView>
@@ -453,5 +453,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: Spacing.four,
   },
-  doneLabel: { color: '#ffffff' },
 });

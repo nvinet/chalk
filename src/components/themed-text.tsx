@@ -11,10 +11,28 @@ export type ThemedTextProps = TextProps & {
 export function ThemedText({ style, type = 'default', themeColor, ...rest }: ThemedTextProps) {
   const theme = useTheme();
 
+  /**
+   * A link takes the accent colour from the theme rather than from a constant.
+   *
+   * It used to take neither: `link` set no colour, so it fell through to
+   * `text` and every link in the app rendered as body copy. `linkPrimary` did
+   * set one — a hardcoded `#3c87f7` that stayed the same in both schemes, so
+   * it was the one thing on a dark screen still lit for a light one.
+   *
+   * An explicit `themeColor` still wins, so a link can be tinted warning or
+   * met where that is what it means.
+   */
+  const colour =
+    themeColor !== undefined
+      ? theme[themeColor]
+      : type === 'link' || type === 'linkPrimary'
+        ? theme.accent
+        : theme.text;
+
   return (
     <Text
       style={[
-        { color: theme[themeColor ?? 'text'] },
+        { color: colour },
         type === 'default' && styles.default,
         type === 'title' && styles.title,
         type === 'small' && styles.small,
@@ -63,7 +81,7 @@ const styles = StyleSheet.create({
   linkPrimary: {
     lineHeight: 30,
     fontSize: 14,
-    color: '#3c87f7',
+    fontWeight: 700,
   },
   code: {
     fontFamily: Fonts.mono,

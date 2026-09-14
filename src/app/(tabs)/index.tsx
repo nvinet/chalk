@@ -166,7 +166,7 @@ function SuggestionCard({
       </ThemedText>
       <Pressable onPress={onStart} accessibilityRole="button">
         <ThemedView style={[styles.primary, { backgroundColor: colors.accent }]}>
-          <ThemedText type="smallBold" style={styles.primaryLabel}>
+          <ThemedText type="smallBold" themeColor="onFilled">
             Start {family.name.toLowerCase()} session
           </ThemedText>
         </ThemedView>
@@ -190,7 +190,7 @@ function ResumeCard({ session }: { session: Session }) {
         onPress={() => router.push({ pathname: '/session/[id]', params: { id: session.id } })}
         accessibilityRole="button">
         <ThemedView style={[styles.primary, { backgroundColor: colors.accent }]}>
-          <ThemedText type="smallBold" style={styles.primaryLabel}>
+          <ThemedText type="smallBold" themeColor="onFilled">
             Continue session
           </ThemedText>
         </ThemedView>
@@ -241,7 +241,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: Spacing.four,
   },
-  primaryLabel: { color: '#ffffff' },
   others: { gap: Spacing.two },
   otherRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   chip: {

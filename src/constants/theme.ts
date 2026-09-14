@@ -31,6 +31,13 @@ export const Colors = {
     warning: '#B3261E',
     /** An optional group: shown, trainable, never blocking. */
     optional: '#60646C',
+    /**
+     * Text on a filled accent or warning surface.
+     *
+     * It has to flip with the scheme, not stay white: the dark accent and
+     * warning are both light colours, and white on them is barely legible.
+     */
+    onFilled: '#ffffff',
   },
   dark: {
     text: '#ffffff',
@@ -44,6 +51,7 @@ export const Colors = {
     outstanding: '#E0B341',
     warning: '#FF6B60',
     optional: '#B0B4BA',
+    onFilled: '#0B0B0C',
   },
 } as const;
 

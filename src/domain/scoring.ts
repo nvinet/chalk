@@ -233,7 +233,7 @@ export function personalBestsInSession(
     const before = bestsForPairing(earlier, pairing, exercise);
     const now = bestsForPairing([session], pairing, exercise);
 
-    const checks: Array<[NewPersonalBest["kind"], number | null, number | null]> = [
+    const checks: [NewPersonalBest["kind"], number | null, number | null][] = [
       ["heaviest", now.heaviestKg, before.heaviestKg],
       ["estimatedOneRepMax", now.bestEstimatedOneRepMaxKg, before.bestEstimatedOneRepMaxKg],
       ["setVolume", now.bestSetVolumeKg, before.bestSetVolumeKg],

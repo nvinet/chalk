@@ -45,7 +45,7 @@ export function SwipeToDelete({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       style={[styles.action, { backgroundColor: colors.warning }]}>
-      <ThemedText type="smallBold" style={styles.label}>
+      <ThemedText type="smallBold" themeColor="onFilled">
         Delete
       </ThemedText>
     </Pressable>
@@ -73,5 +73,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: Spacing.three,
   },
-  label: { color: '#ffffff' },
 });

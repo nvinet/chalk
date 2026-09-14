@@ -283,7 +283,7 @@ export default function LogExerciseScreen() {
               A set finished early is a set logged early. */}
           <Pressable onPress={commit} accessibilityRole="button">
             <ThemedView style={[styles.logButton, { backgroundColor: colors.accent }]}>
-              <ThemedText type="smallBold" style={styles.logLabel}>
+              <ThemedText type="smallBold" themeColor="onFilled">
                 Log set {nextSetNumber}
               </ThemedText>
             </ThemedView>
@@ -436,7 +436,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: Spacing.four,
   },
-  logLabel: { color: '#ffffff' },
   footer: {
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.three,
