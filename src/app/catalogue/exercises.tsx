@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CatalogueAddField, CatalogueHeader } from '@/components/catalogue-header';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, MinTouchTarget, Spacing } from '@/constants/theme';
@@ -39,16 +40,24 @@ export default function ExercisesScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            style={styles.headerButton}
-            accessibilityRole="button">
-            <ThemedText type="link">‹ More</ThemedText>
-          </Pressable>
-          <ThemedText type="smallBold">Exercises</ThemedText>
-          <View style={styles.headerButton} />
-        </View>
+        <CatalogueHeader
+          title="Exercises"
+          adding={adding}
+          addLabel="Add an exercise"
+          onToggleAdd={() => {
+            setNewName('');
+            setAdding((open) => !open);
+          }}
+        />
+
+        {adding && (
+          <CatalogueAddField
+            value={newName}
+            onChangeText={setNewName}
+            onSubmit={add}
+            placeholder="New exercise"
+          />
+        )}
 
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <TextInput
@@ -58,38 +67,6 @@ export default function ExercisesScreen() {
             placeholderTextColor={colors.textSecondary}
             style={[styles.input, { color: colors.text, borderColor: colors.border }]}
           />
-
-          {adding ? (
-            <View style={styles.addRow}>
-              <TextInput
-                value={newName}
-                onChangeText={setNewName}
-                placeholder="New exercise"
-                placeholderTextColor={colors.textSecondary}
-                autoFocus
-                onSubmitEditing={add}
-                style={[styles.input, styles.grow, { color: colors.text, borderColor: colors.border }]}
-              />
-              <Pressable onPress={add} accessibilityRole="button" style={styles.iconButton}>
-                <ThemedText type="link">Add</ThemedText>
-              </Pressable>
-              <Pressable
-                onPress={() => setAdding(false)}
-                accessibilityRole="button"
-                style={styles.iconButton}>
-                <ThemedText type="small" themeColor="textSecondary">
-                  Cancel
-                </ThemedText>
-              </Pressable>
-            </View>
-          ) : (
-            <Pressable
-              onPress={() => setAdding(true)}
-              accessibilityRole="button"
-              style={styles.addButton}>
-              <ThemedText type="link">+ Add an exercise</ThemedText>
-            </Pressable>
-          )}
 
           <ThemedText type="small" themeColor="textSecondary">
             {matches.length} of {exercises.length}
@@ -132,14 +109,6 @@ export function trackingLabel(tracking: string): string {
 const styles = StyleSheet.create({
   container: { flex: 1, flexDirection: 'row', justifyContent: 'center' },
   safeArea: { flex: 1, width: '100%', maxWidth: MaxContentWidth },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.three,
-    paddingBottom: Spacing.three,
-  },
-  headerButton: { minHeight: MinTouchTarget, minWidth: 80, justifyContent: 'center' },
   scroll: { paddingHorizontal: Spacing.four, paddingBottom: Spacing.five, gap: Spacing.two },
   input: {
     minHeight: MinTouchTarget,
@@ -147,9 +116,6 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.three,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  grow: { flex: 1 },
-  addRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  addButton: { minHeight: MinTouchTarget, justifyContent: 'center' },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -157,5 +123,4 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   rowBody: { flex: 1, gap: Spacing.half },
-  iconButton: { minHeight: MinTouchTarget, minWidth: 44, alignItems: 'center', justifyContent: 'center' },
 });
